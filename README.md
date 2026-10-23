@@ -15,7 +15,12 @@ A minimal API organized in vertical slices, with unit and integration tests (xUn
 - `Starter.Template` is replaced everywhere by the name you choose (files, folders,
   namespaces, project references).
 - Central package management (`Directory.Packages.props`).
-- Optional modules through the `modules` parameter: `scalar`, `swaggerui` (both by default).
+- Optional modules through the `modules` parameter: `scalar`, `swaggerui` (both by default),
+  `database`. The `database` module adds a `compose.yaml` running SQL Server, a
+  `UserSecretsId` on the API and a password-less connection string in
+  `appsettings.Development.json`. The CLI fills in the password (see below); with plain
+  `dotnet new`, set `ConnectionStrings:Default` with `dotnet user-secrets` and
+  `MSSQL_SA_PASSWORD` in a `.env` yourself.
   The demo enables every module (see `Directory.Build.props`), so the repo always builds and
   tests all of them.
 
@@ -32,6 +37,12 @@ After changing the template, reinstall it with `dotnet new install ./template --
 
 Asks for the template, the folder, the solution name and the modules, then generates,
 restores, builds and tests the project. The prompts and messages are in French.
+
+With the database module, it also asks for the sa password and stores it twice: the full
+connection string in the API's user secrets (overriding the one in
+`appsettings.Development.json`), and `MSSQL_SA_PASSWORD` in a gitignored `.env` for
+`docker compose`. The password goes to `dotnet user-secrets` through stdin, never as an
+argument.
 
 ```bash
 dotnet run --project tools/Starter.Init/src/Starter.Init

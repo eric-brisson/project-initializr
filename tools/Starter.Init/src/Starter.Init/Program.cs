@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Spectre.Console;
 using Starter.Init.Prompts;
@@ -71,6 +72,10 @@ internal static class Program
                 .Ask("modules", "Quels modules voulez-vous ajouter ?")
             : [.. template.Modules.Where(module => module.SelectedByDefault)];
 
+        var saPassword = interactive && modules.Any(module => module.Id == Templates.DatabaseId)
+            ? AskSaPassword()
+            : null;
+
         if (Directory.Exists(Path.Combine(outputDir!, "src", $"{name}.Api")))
         {
             Ui.Fail($"src\\{name}.Api existe déjà dans {outputDir}.");
@@ -104,15 +109,19 @@ internal static class Program
         var solution = Path.Combine(outputDir!, $"{name}.sln");
         Step[] steps =
         [
-            new("Génération du projet", "Projet généré", Color.FromHex("#8B9BFA"),
+            new("Génération du projet", "Projet généré", Color.FromHex("#8B9BFA"), () => DotNetCli.RunAsync(
             [
                 "new", template.ShortName, "--name", name, "--output", outputDir!,
                 .. ModuleArguments(template, modules),
                 .. (replaceGitignore ? ["--force"] : Array.Empty<string>()),
-            ]),
-            new("Restauration des paquets", "Paquets restaurés", Color.FromHex("#98C379"), ["restore", solution]),
-            new("Compilation de la solution", "Solution compilée", Color.FromHex("#61AFEF"), ["build", solution, "--no-restore"]),
-            new("Exécution des tests", "Tests réussis", Color.FromHex("#E5C07B"), ["test", solution, "--no-build"]),
+            ])),
+            new("Restauration des paquets", "Paquets restaurés", Color.FromHex("#98C379"), () => DotNetCli.RunAsync("restore", solution)),
+            .. (saPassword is not null
+                ? [new Step("Configuration de la base", "Base configurée", Color.FromHex("#C678DD"),
+                    () => ConfigureDatabaseAsync(outputDir!, name, saPassword))]
+                : Array.Empty<Step>()),
+            new("Compilation de la solution", "Solution compilée", Color.FromHex("#61AFEF"), () => DotNetCli.RunAsync("build", solution, "--no-restore")),
+            new("Exécution des tests", "Tests réussis", Color.FromHex("#E5C07B"), () => DotNetCli.RunAsync("test", solution, "--no-build")),
         ];
 
         // Keeping the existing .gitignore: move it aside while generating, then put it back.
@@ -145,13 +154,37 @@ internal static class Program
         return 0;
     }
 
-    private sealed record Step(string Running, string Done, Color Color, string[] Arguments);
+    private sealed record Step(string Running, string Done, Color Color, Func<Task<DotNetCli.Result>> Run);
 
     // One "--modules <id>" per selected module; an empty value turns off the template's default modules.
     private static string[] ModuleArguments(Templates.Choice template, IReadOnlyList<Templates.Module> modules) =>
         template.Modules.Count == 0 ? []
         : modules.Count == 0 ? ["--modules", string.Empty]
         : [.. modules.SelectMany(module => new[] { "--modules", module.Id })];
+
+    // The API reads the full connection string from its user secrets; docker compose reads the password from .env.
+    // The secrets go through stdin, so the password doesn't show up in the process list.
+    private static async Task<DotNetCli.Result> ConfigureDatabaseAsync(string outputDir, string name, string saPassword)
+    {
+        // Quoted, so a ; in the password doesn't end the value.
+        var connectionString =
+            $"Server=localhost,1433;Database={name};User Id=sa;Password=\"{saPassword.Replace("\"", "\"\"")}\";TrustServerCertificate=True";
+        var secrets = JsonSerializer.Serialize(new { ConnectionStrings = new { Default = connectionString } });
+
+        var project = Path.Combine(outputDir, "src", $"{name}.Api");
+        var result = await DotNetCli.RunAsync(["user-secrets", "set", "--project", project], secrets);
+        if (result.ExitCode != 0)
+        {
+            return result;
+        }
+
+        // Added to an existing .env (a cloned repo may have one) rather than replacing it.
+        // Single quotes keep the value literal: docker compose doesn't expand $ in it.
+        await File.AppendAllTextAsync(
+            Path.Combine(outputDir, ".env"),
+            $"# sa password of the SQL Server container (compose.yaml). Not committed.\nMSSQL_SA_PASSWORD='{saPassword}'\n");
+        return result;
+    }
 
     // Shows every step up front, then runs them one by one, each in its own color.
     private static async Task<bool> RunStepsAsync(IReadOnlyList<Step> steps)
@@ -181,7 +214,7 @@ internal static class Program
                     task.Description = Label(step.Running, color);
                     task.StartTask();
 
-                    var result = await DotNetCli.RunAsync(step.Arguments);
+                    var result = await step.Run();
                     if (result.ExitCode != 0)
                     {
                         display.MarkFailed(task);
@@ -250,6 +283,34 @@ internal static class Program
                     ? $"Le projet API sera {Path.Combine("src", $"{name.TrimEnd('.')}.Api")}"
                     : NameRule)
             .Ask("nom", "Quel nom pour la solution ?");
+
+    // SQL Server refuses to start with a weak sa password, so check its policy here rather than in the container logs.
+    private static string AskSaPassword() =>
+        new InputPrompt(
+                string.Empty,
+                validate: SaPasswordError,
+                hint: password => SaPasswordError(password) ?? "Enregistré dans les secrets utilisateur de l'API et dans .env (non versionné)",
+                summary: password => new string('•', password.Length),
+                secret: true)
+            .Ask("sql", "Quel mot de passe pour le compte sa de SQL Server ?");
+
+    // At least 8 characters from 3 of the 4 groups: uppercase, lowercase, digits, symbols.
+    // No single quote: .env wraps the value in single quotes so docker compose reads it literally.
+    private static string? SaPasswordError(string password)
+    {
+        var groups = new[]
+        {
+            password.Any(char.IsUpper),
+            password.Any(char.IsLower),
+            password.Any(char.IsDigit),
+            password.Any(c => !char.IsLetterOrDigit(c)),
+        }.Count(present => present);
+
+        return password.Length < 8 || groups < 3
+            ? "Au moins 8 caractères, avec 3 types parmi majuscules, minuscules, chiffres et symboles"
+            : password.Contains('\'') ? "Les apostrophes (') ne sont pas acceptées"
+            : null;
+    }
 
     private static bool AskYesNo(string badge, string question, bool yesFirst = true)
     {

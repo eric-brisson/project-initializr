@@ -11,10 +11,14 @@ internal static class DotNetCli
         return result.ExitCode == 0;
     }
 
-    public static async Task<Result> RunAsync(params string[] arguments)
+    public static Task<Result> RunAsync(params string[] arguments) => RunAsync(arguments, input: null);
+
+    // input, when set, is written to the command's standard input (e.g. secrets kept out of the arguments).
+    public static async Task<Result> RunAsync(string[] arguments, string? input)
     {
         var startInfo = new ProcessStartInfo("dotnet", arguments)
         {
+            RedirectStandardInput = input is not null,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
@@ -27,6 +31,12 @@ internal static class DotNetCli
 
         var standardOutput = process.StandardOutput.ReadToEndAsync();
         var standardError = process.StandardError.ReadToEndAsync();
+        if (input is not null)
+        {
+            await process.StandardInput.WriteAsync(input);
+            process.StandardInput.Close();
+        }
+
         await process.WaitForExitAsync();
 
         return new Result(process.ExitCode, await standardOutput + await standardError);

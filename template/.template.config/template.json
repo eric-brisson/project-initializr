@@ -7,6 +7,7 @@
   "shortName": "project-initializr",
   "sourceName": "Starter.Template",
   "preferNameDirectory": false,
+  "guids": ["e6a7d71c-b404-43dd-9bfb-5e781c80e435"],
   "tags": {
     "language": "C#",
     "type": "solution"
@@ -20,7 +21,8 @@
       "description": "Optional modules to include.",
       "choices": [
         { "choice": "scalar", "description": "Scalar API reference (/scalar)" },
-        { "choice": "swaggerui", "description": "Swagger UI (/swagger)" }
+        { "choice": "swaggerui", "description": "Swagger UI (/swagger)" },
+        { "choice": "database", "description": "SQL Server in docker compose" }
       ],
       "defaultValue": "scalar|swaggerui"
     },
@@ -31,6 +33,10 @@
     "UseSwaggerUi": {
       "type": "computed",
       "value": "(modules == swaggerui)"
+    },
+    "UseDatabase": {
+      "type": "computed",
+      "value": "(modules == database)"
     }
   },
   "sources": [
@@ -47,6 +53,10 @@
             "**/TestResults/**",
             "**/*.user"
           ]
+        },
+        {
+          "condition": "(!UseDatabase)",
+          "exclude": ["compose.yaml"]
         }
       ]
     }

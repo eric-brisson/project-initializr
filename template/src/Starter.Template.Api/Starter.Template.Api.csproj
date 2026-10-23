@@ -4,6 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!--#if (UseDatabase) -->
+    <!-- Replaced by a new id for each generated project (see "guids" in template.json). -->
+    <UserSecretsId>e6a7d71c-b404-43dd-9bfb-5e781c80e435</UserSecretsId>
+    <!--#endif -->
   </PropertyGroup>
 
   <ItemGroup>
