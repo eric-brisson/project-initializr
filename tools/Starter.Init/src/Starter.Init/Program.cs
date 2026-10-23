@@ -239,15 +239,16 @@ internal static class Program
         return ToFullPath(folder)!;
     }
 
+    private const string NameRule = "Utilisez un espace de noms C# valide, par exemple Sample.Orders";
+
+    // The hint ignores a trailing dot, so it doesn't vanish each time the user starts a new segment.
     private static string AskName(string outputDir) =>
         new InputPrompt(
                 NameFromFolder(outputDir),
-                validate: name => ValidName().IsMatch(name)
-                    ? null
-                    : "Utilisez un espace de noms C# valide, par exemple Sample.Orders",
-                hint: name => ValidName().IsMatch(name)
-                    ? $"Le projet API sera {Path.Combine("src", $"{name}.Api")}"
-                    : null)
+                validate: name => ValidName().IsMatch(name) ? null : NameRule,
+                hint: name => ValidName().IsMatch(name.TrimEnd('.'))
+                    ? $"Le projet API sera {Path.Combine("src", $"{name.TrimEnd('.')}.Api")}"
+                    : NameRule)
             .Ask("nom", "Quel nom pour la solution ?");
 
     private static bool AskYesNo(string badge, string question, bool yesFirst = true)
@@ -305,11 +306,18 @@ internal static class Program
     }
 
     // Relative paths are resolved from the current folder; returns null for an invalid path or an existing file.
+    // A leading "~" is the home folder, as in a shell: the prompts don't go through one to expand it.
     private static string? ToFullPath(string path)
     {
         try
         {
-            var fullPath = Path.GetFullPath(path.Trim().Trim('"'), Directory.GetCurrentDirectory());
+            path = path.Trim().Trim('"');
+            if (path == "~" || path.StartsWith("~/") || path.StartsWith(@"~\"))
+            {
+                path = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path[1..]);
+            }
+
+            var fullPath = Path.GetFullPath(path, Directory.GetCurrentDirectory());
             return File.Exists(fullPath) ? null : fullPath;
         }
         catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)

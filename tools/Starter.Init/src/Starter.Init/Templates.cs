@@ -16,11 +16,11 @@ internal static class Templates
     // Add a line here when a new Starter template is published. Module ids match the template's "modules" choices.
     public static readonly IReadOnlyList<Choice> All =
     [
-        new("API minimale", "API ASP.NET Core en tranches verticales, avec ses tests", "starter-api",
+        new("minimal API", "Minimal API .NET, vertical avec tests", "project-initializr",
         [
-            new("Documentation", "scalar", "Scalar", "référence d'API interactive", true,
+            new("Documentation", "scalar", "Scalar", "référence d'API interactive", false,
                 "Explorez l'API sur [#61AFEF]/scalar[/]"),
-            new("Documentation", "swaggerui", "Swagger UI", "interface Swagger classique", true,
+            new("Documentation", "swaggerui", "Swagger UI", "interface Swagger classique", false,
                 "Ou avec Swagger UI sur [#61AFEF]/swagger[/]"),
         ]),
     ];

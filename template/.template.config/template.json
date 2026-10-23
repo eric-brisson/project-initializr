@@ -3,8 +3,8 @@
   "author": "Starter Maintainers",
   "classifications": ["Web", "API"],
   "identity": "Starter.Api",
-  "name": "Starter standalone API",
-  "shortName": "starter-api",
+  "name": "Project Initializr",
+  "shortName": "project-initializr",
   "sourceName": "Starter.Template",
   "preferNameDirectory": false,
   "tags": {
