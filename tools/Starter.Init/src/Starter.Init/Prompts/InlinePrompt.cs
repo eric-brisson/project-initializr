@@ -15,6 +15,9 @@ internal abstract class InlinePrompt<T>
             .AutoClear(true)
             .Start(context =>
             {
+                // Live only draws on refresh: show the choices before waiting for the first key.
+                context.Refresh();
+
                 while (!HandleKey(Keyboard.ReadKey()))
                 {
                     context.UpdateTarget(Ui.Indented(Render()));

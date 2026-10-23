@@ -23,8 +23,17 @@ internal static class Program
         var interactive = args.Length == 0;
         if (interactive && !Keyboard.IsAvailable)
         {
-            Ui.Fail("Pas de clavier disponible : passez le nom en argument, par exemple starter-init Sample.Orders");
+            Ui.Fail("Ce terminal ne permet pas les questions interactives.");
+            Ui.Line("[grey]Lancez l'outil dans un vrai terminal (Windows Terminal, PowerShell), pas dans la fenêtre « Run » d'un IDE,[/]");
+            Ui.Line("[grey]ou passez le nom en argument, par exemple : starter-init Sample.Orders[/]");
             return 1;
+        }
+
+        // Spectre turns live displays off when it sees a build server variable (TF_BUILD, GITHUB_ACTIONS,
+        // JENKINS_URL, TEAMCITY_VERSION), even in a real terminal. With a real keyboard and screen, force them on.
+        if (interactive)
+        {
+            AnsiConsole.Profile.Capabilities.Interactive = true;
         }
 
         // The template comes first: the other questions depend on the project type.
