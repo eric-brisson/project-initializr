@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Starter Maintainers",
+  "classifications": ["Web", "API"],
+  "identity": "Starter.Api",
+  "name": "Starter standalone API",
+  "shortName": "starter-api",
+  "sourceName": "Starter.Template",
+  "preferNameDirectory": false,
+  "tags": {
+    "language": "C#",
+    "type": "solution"
+  },
+  "symbols": {
+    "modules": {
+      "type": "parameter",
+      "datatype": "choice",
+      "allowMultipleValues": true,
+      "enableQuotelessLiterals": true,
+      "description": "Optional modules to include.",
+      "choices": [
+        { "choice": "scalar", "description": "Scalar API reference (/scalar)" },
+        { "choice": "swaggerui", "description": "Swagger UI (/swagger)" }
+      ],
+      "defaultValue": "scalar|swaggerui"
+    },
+    "UseScalar": {
+      "type": "computed",
+      "value": "(modules == scalar)"
+    },
+    "UseSwaggerUi": {
+      "type": "computed",
+      "value": "(modules == swaggerui)"
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "exclude": [
+            ".git/**",
+            ".github/**",
+            ".vs/**",
+            ".template.config/**",
+            "**/[Bb]in/**",
+            "**/[Oo]bj/**",
+            "**/TestResults/**",
+            "**/*.user"
+          ]
+        }
+      ]
+    }
+  ]
+}

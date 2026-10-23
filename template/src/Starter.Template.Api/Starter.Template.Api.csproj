@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!--#if (UseScalar) -->
+    <PackageReference Include="Scalar.AspNetCore" />
+    <!--#endif -->
+    <!--#if (UseSwaggerUi) -->
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
+    <!--#endif -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Starter.Template.Api.UnitTests" />
+  </ItemGroup>
+
+</Project>

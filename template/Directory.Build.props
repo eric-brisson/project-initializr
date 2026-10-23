@@ -1,0 +1,11 @@
+<Project>
+
+  <!--#if (false) -->
+  <!-- Demo only: turn every module on, so the template repo builds and tests all of them.
+       The template engine removes this block from generated projects. -->
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);UseScalar;UseSwaggerUi</DefineConstants>
+  </PropertyGroup>
+  <!--#endif -->
+
+</Project>
