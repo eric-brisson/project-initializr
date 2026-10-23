@@ -7,9 +7,14 @@ namespace Starter.Init.Prompts;
 // the interactive part disappears and only the answer stays, in grey.
 internal abstract class InlinePrompt<T>
 {
-    public T Ask(string badge, string question)
+    // details, when set, is drawn between the question and the choices (e.g. a summary to review).
+    public T Ask(string badge, string question, IRenderable? details = null)
     {
         Ui.Badge(badge, question);
+        if (details is not null)
+        {
+            AnsiConsole.Write(Ui.Indented(details));
+        }
 
         AnsiConsole.Live(Ui.Indented(Render()))
             .AutoClear(true)

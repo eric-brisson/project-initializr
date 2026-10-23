@@ -32,5 +32,17 @@ internal static class Ui
 
     public static void Fail(string text) => Badge("erreur", $"[{Error.ToMarkup()}]{Markup.Escape(text)}[/]", Error);
 
+    // Grey labels and blue values in two columns. Values are markup: escape plain text before passing it.
+    public static IRenderable Details(IEnumerable<(string Label, string Value)> rows)
+    {
+        var grid = new Grid().AddColumn(new GridColumn().PadRight(2)).AddColumn();
+        foreach (var (label, value) in rows)
+        {
+            grid.AddRow(new Markup($"[grey]{Markup.Escape(label)}[/]"), new Markup($"[{Info.ToMarkup()}]{value}[/]"));
+        }
+
+        return grid;
+    }
+
     public static IRenderable Indented(IRenderable content) => new Padder(content, new Padding(BadgeWidth + 2, 0, 0, 0));
 }

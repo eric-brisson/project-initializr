@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 using Starter.Init.Prompts;
 
 namespace Starter.Init;
@@ -101,7 +102,20 @@ internal static class Program
             && (!interactive || !AskYesNo("git", "Un .gitignore existe déjà. Le remplacer par celui du modèle ?", yesFirst: false));
         var replaceGitignore = File.Exists(gitignore) && !keepGitignore;
 
-        if (interactive && !AskYesNo("créer", "Tout est prêt. Générer le projet ?"))
+        var initGit = interactive && await Git.CanInitAsync(outputDir!)
+            && AskYesNo("git", "Initialiser un dépôt Git dans le dossier ?");
+
+        // The first commit is the generated project as it was, to compare against or go back to.
+        var commit = initGit && await Git.HasIdentityAsync();
+        if (initGit)
+        {
+            Ui.Line(commit
+                ? "[grey]Un premier commit sera créé sur main une fois les tests réussis[/]"
+                : "[grey]Pas de premier commit : configurez user.name et user.email dans Git[/]");
+        }
+
+        var summary = Summary(template, outputDir!, name, modules, database, initGit, commit, keepGitignore, replaceGitignore);
+        if (interactive && !AskYesNo("créer", "Tout est prêt. Générer le projet ?", details: summary))
         {
             return 0;
         }
@@ -109,28 +123,35 @@ internal static class Program
         var solution = Path.Combine(outputDir!, $"{name}.sln");
         Step[] steps =
         [
-            new("Génération du projet", "Projet généré", Color.FromHex("#8B9BFA"), () => DotNetCli.RunAsync(
+            new("Génération du projet", "Projet généré", () => DotNetCli.RunAsync(
             [
                 "new", template.ShortName, "--name", name, "--output", outputDir!,
                 .. ModuleArguments(template, modules),
                 .. (database is not null ? ["--databaseName", database.Name] : Array.Empty<string>()),
                 .. (replaceGitignore ? ["--force"] : Array.Empty<string>()),
             ])),
-            new("Restauration des paquets", "Paquets restaurés", Color.FromHex("#98C379"), () => DotNetCli.RunAsync("restore", solution)),
+            .. (initGit
+                ? [new Step("Initialisation du dépôt Git", "Dépôt Git initialisé", () => Git.InitAsync(outputDir!))]
+                : Array.Empty<Step>()),
+            new("Restauration des paquets", "Paquets restaurés", () => DotNetCli.RunAsync("restore", solution)),
             .. (database is not null
-                ? [new Step("Configuration de la base", "Base configurée", Color.FromHex("#C678DD"),
+                ? [new Step("Configuration de la base", "Base configurée",
                     () => ConfigureDatabaseAsync(outputDir!, name, database))]
                 : Array.Empty<Step>()),
-            new("Compilation de la solution", "Solution compilée", Color.FromHex("#61AFEF"), () => DotNetCli.RunAsync("build", solution, "--no-restore")),
-            new("Exécution des tests", "Tests réussis", Color.FromHex("#E5C07B"), () => DotNetCli.RunAsync("test", solution, "--no-build")),
+            new("Compilation de la solution", "Solution compilée", () => DotNetCli.RunAsync("build", solution, "--no-restore")),
+            new("Exécution des tests", "Tests réussis", () => DotNetCli.RunAsync("test", solution, "--no-build")),
+            .. (commit
+                ? [new Step("Création du premier commit", "Premier commit créé",
+                    () => Git.CommitAllAsync(outputDir!, InitialCommitMessage(template, modules)))]
+                : Array.Empty<Step>()),
 
             // Last, so a Docker problem (image download, port) doesn't get in the way of the build and tests.
             .. (database is { UseDocker: true }
                 ?
                 [
-                    new Step("Démarrage de SQL Server dans Docker", "SQL Server démarré dans Docker", Ui.Docker,
+                    new Step("Démarrage de SQL Server dans Docker", "SQL Server démarré dans Docker",
                         () => Docker.StartSqlServerAsync(outputDir!)),
-                    new Step($"Création de la base {database.Name}", $"Base {database.Name} créée", Ui.Docker,
+                    new Step($"Création de la base {database.Name}", $"Base {database.Name} créée",
                         () => Docker.CreateDatabaseAsync(outputDir!, database.Name, database.SaPassword)),
                 ]
                 : Array.Empty<Step>()),
@@ -166,10 +187,16 @@ internal static class Program
         return 0;
     }
 
-    private sealed record Step(string Running, string Done, Color Color, Func<Task<ProcessRunner.Result>> Run);
+    private sealed record Step(string Running, string Done, Func<Task<ProcessRunner.Result>> Run);
 
     // UseDocker is false when Docker isn't available: the project is still configured, the container just isn't started.
     private sealed record Database(string Name, string SaPassword, int Port, bool UseDocker);
+
+    // e.g. "Initial commit (project-initializr: scalar, database)", so the log tells how the project was generated.
+    private static string InitialCommitMessage(Templates.Choice template, IReadOnlyList<Templates.Module> modules) =>
+        modules.Count == 0
+            ? $"Initial commit ({template.ShortName})"
+            : $"Initial commit ({template.ShortName}: {string.Join(", ", modules.Select(module => module.Id))})";
 
     // One "--modules <id>" per selected module; an empty value turns off the template's default modules.
     private static string[] ModuleArguments(Templates.Choice template, IReadOnlyList<Templates.Module> modules) =>
@@ -225,7 +252,8 @@ internal static class Program
         return result;
     }
 
-    // Shows every step up front, then runs them one by one, each in its own color.
+    // Shows every step up front, then runs them one by one. All steps share the accent color, so the green
+    // "Projet initialisé !" after them stands out.
     private static async Task<bool> RunStepsAsync(IReadOnlyList<Step> steps)
     {
         var display = new StepDisplay();
@@ -249,7 +277,7 @@ internal static class Program
                 for (var i = 0; i < steps.Count; i++)
                 {
                     var (step, task) = (steps[i], tasks[i]);
-                    var color = step.Color.ToMarkup();
+                    var color = Ui.Accent.ToMarkup();
                     task.Description = Label(step.Running, color);
                     task.StartTask();
 
@@ -367,12 +395,58 @@ internal static class Program
             : null;
     }
 
-    private static bool AskYesNo(string badge, string question, bool yesFirst = true)
+    private static bool AskYesNo(string badge, string question, bool yesFirst = true, IRenderable? details = null)
     {
         (string Label, bool Value)[] choices = yesFirst ? [("Oui", true), ("Non", false)] : [("Non", false), ("Oui", true)];
         return new SelectPrompt<(string Label, bool Value)>(choices, choice => choice.Label)
-            .Ask(badge, question)
+            .Ask(badge, question, details)
             .Value;
+    }
+
+    // Every choice in one place before generating, including what the tool decided itself (port, Docker, commit).
+    // Lines that don't apply are left out, and the password is never shown.
+    private static IRenderable Summary(
+        Templates.Choice template,
+        string outputDir,
+        string name,
+        IReadOnlyList<Templates.Module> modules,
+        Database? database,
+        bool initGit,
+        bool commit,
+        bool keepGitignore,
+        bool replaceGitignore)
+    {
+        var rows = new List<(string, string)>
+        {
+            ("Modèle", Markup.Escape(template.Name)),
+            ("Dossier", Markup.Escape(outputDir)),
+            ("Solution", Markup.Escape($"{name} → {Path.Combine("src", $"{name}.Api")}")),
+        };
+
+        if (template.Modules.Count > 0)
+        {
+            rows.Add(("Modules", modules.Count == 0 ? "aucun" : Markup.Escape(string.Join(", ", modules.Select(module => module.Name)))));
+        }
+
+        if (database is not null)
+        {
+            var docker = database.UseDocker
+                ? "démarrée dans Docker"
+                : $"[{Ui.Warning.ToMarkup()}]Docker indisponible, SQL Server ne sera pas démarré[/]";
+            rows.Add(("Base de données", $"{Markup.Escape(database.Name)}, port {database.Port}, {docker}"));
+        }
+
+        if (initGit)
+        {
+            rows.Add(("Git", commit ? "dépôt sur main + premier commit" : "dépôt sur main, sans premier commit"));
+        }
+
+        if (keepGitignore || replaceGitignore)
+        {
+            rows.Add((".gitignore", keepGitignore ? "conservé" : "remplacé par celui du modèle"));
+        }
+
+        return Ui.Details(rows);
     }
 
     private static void ShowNextSteps(string name, string outputDir, IReadOnlyList<Templates.Module> modules, Database? database)
@@ -409,21 +483,15 @@ internal static class Program
             Ui.Line("Démarrez d'abord SQL Server avec [#61AFEF]docker compose up -d[/]");
         }
 
-        var grid = new Grid().AddColumn(new GridColumn().PadRight(2)).AddColumn();
-        foreach (var (label, value) in new[]
+        AnsiConsole.Write(Ui.Indented(Ui.Details(new[]
         {
             ("Serveur", $"localhost,{database.Port}"),
             ("Authentification", "SQL Login"),
             ("Utilisateur", "sa"),
             ("Mot de passe", "celui saisi, aussi dans .env"),
-            ("Base", database.Name),
+            ("Base de données", database.Name),
             ("Certificat", "Trust server certificate (certificat auto-signé)"),
-        })
-        {
-            grid.AddRow(new Markup($"[grey]{label}[/]"), new Markup($"[#61AFEF]{Markup.Escape(value)}[/]"));
-        }
-
-        AnsiConsole.Write(Ui.Indented(grid));
+        }.Select(row => (row.Item1, Markup.Escape(row.Item2))))));
     }
 
     // "sample-orders" → "Sample.Orders". A trailing "Api" is dropped, since the project name adds ".Api".

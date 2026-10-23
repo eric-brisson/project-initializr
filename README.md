@@ -36,7 +36,8 @@ After changing the template, reinstall it with `dotnet new install ./template --
 
 ## The CLI
 
-Asks for the template, the folder, the solution name and the modules, then generates,
+Asks for the template, the folder, the solution name, the modules and whether to run
+`git init` (unless the folder is already in a repo), then generates,
 restores, builds and tests the project. The prompts and messages are in French.
 
 With the database module, it also asks for the database name and the sa password, starts
