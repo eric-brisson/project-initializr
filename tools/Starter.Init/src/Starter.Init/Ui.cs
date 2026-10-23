@@ -14,6 +14,8 @@ internal static class Ui
     public static readonly Color Success = Color.FromHex("#98C379");
     public static readonly Color Info = Color.FromHex("#61AFEF");
     public static readonly Color Error = Color.FromHex("#E06C75");
+    public static readonly Color Warning = Color.FromHex("#E5C07B");
+    public static readonly Color Docker = Color.FromHex("#56B6C2");
 
     // A blank line, then the badge right-aligned in its column, followed by the text.
     public static void Badge(string label, string text, Color? color = null)

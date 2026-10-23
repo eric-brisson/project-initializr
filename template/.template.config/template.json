@@ -37,6 +37,47 @@
     "UseDatabase": {
       "type": "computed",
       "value": "(modules == database)"
+    },
+    "databaseName": {
+      "type": "parameter",
+      "datatype": "string",
+      "description": "SQL Server database name (database module). Defaults to the solution name without dots (Sample.Orders → SampleOrders).",
+      "defaultValue": ""
+    },
+    "defaultDatabaseName": {
+      "type": "generated",
+      "generator": "regex",
+      "parameters": {
+        "source": "name",
+        "steps": [{ "regex": "[^A-Za-z0-9_]+", "replacement": "" }]
+      }
+    },
+    "databaseNameOrDefault": {
+      "type": "generated",
+      "generator": "coalesce",
+      "replaces": "StarterTemplate",
+      "parameters": {
+        "sourceVariableName": "databaseName",
+        "fallbackVariableName": "defaultDatabaseName"
+      }
+    },
+    "composeNameLower": {
+      "type": "generated",
+      "generator": "casing",
+      "parameters": { "source": "name", "toLower": true }
+    },
+    "composeName": {
+      "type": "generated",
+      "generator": "regex",
+      "description": "docker compose project name: the solution name in lowercase, dots and other characters as dashes (Sample.Orders → sample-orders).",
+      "replaces": "starter-template",
+      "parameters": {
+        "source": "composeNameLower",
+        "steps": [
+          { "regex": "[^a-z0-9_-]+", "replacement": "-" },
+          { "regex": "^[-_]+", "replacement": "" }
+        ]
+      }
     }
   },
   "sources": [

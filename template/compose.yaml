@@ -1,6 +1,8 @@
 # Local SQL Server for development. The sa password comes from .env (not committed),
 # written by starter-init along with the API's user secrets.
 # Start it with: docker compose up -d
+# The project name fixes the container (starter-template-sqlserver-1) and volume names, whatever the folder is called.
+name: starter-template
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest

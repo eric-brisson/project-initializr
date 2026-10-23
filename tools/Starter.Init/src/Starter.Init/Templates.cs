@@ -25,8 +25,8 @@ internal static class Templates
                 "Explorez l'API sur [#61AFEF]/scalar[/]"),
             new("Documentation", "swaggerui", "Swagger UI", "interface Swagger classique", false,
                 "Ou avec Swagger UI sur [#61AFEF]/swagger[/]"),
-            new("Données", DatabaseId, "SQL Server", "conteneur docker compose", false,
-                "Démarrez SQL Server avec [#61AFEF]docker compose up -d[/]"),
+            // No NextStep: Program shows the connection details instead.
+            new("Données", DatabaseId, "SQL Server", "conteneur Docker avec la base du projet", false),
         ]),
     ];
 }

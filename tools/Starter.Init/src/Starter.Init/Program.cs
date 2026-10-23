@@ -72,8 +72,8 @@ internal static class Program
                 .Ask("modules", "Quels modules voulez-vous ajouter ?")
             : [.. template.Modules.Where(module => module.SelectedByDefault)];
 
-        var saPassword = interactive && modules.Any(module => module.Id == Templates.DatabaseId)
-            ? AskSaPassword()
+        var database = interactive && modules.Any(module => module.Id == Templates.DatabaseId)
+            ? await PrepareDatabaseAsync(AskDatabaseName(name), AskSaPassword())
             : null;
 
         if (Directory.Exists(Path.Combine(outputDir!, "src", $"{name}.Api")))
@@ -90,7 +90,7 @@ internal static class Program
         }
 
         if (interactive && !IsEmptyFolder(outputDir!)
-            && !AskYesNo("dossier", "Le dossier n'est pas vide. Continuer quand même ?", yesFirst: false))
+            && !AskYesNo("dossier", $"Le dossier [#61AFEF]{Markup.Escape(outputDir!)}[/] n'est pas vide. Continuer quand même ?", yesFirst: false))
         {
             return 0;
         }
@@ -113,15 +113,27 @@ internal static class Program
             [
                 "new", template.ShortName, "--name", name, "--output", outputDir!,
                 .. ModuleArguments(template, modules),
+                .. (database is not null ? ["--databaseName", database.Name] : Array.Empty<string>()),
                 .. (replaceGitignore ? ["--force"] : Array.Empty<string>()),
             ])),
             new("Restauration des paquets", "Paquets restaurés", Color.FromHex("#98C379"), () => DotNetCli.RunAsync("restore", solution)),
-            .. (saPassword is not null
+            .. (database is not null
                 ? [new Step("Configuration de la base", "Base configurée", Color.FromHex("#C678DD"),
-                    () => ConfigureDatabaseAsync(outputDir!, name, saPassword))]
+                    () => ConfigureDatabaseAsync(outputDir!, name, database))]
                 : Array.Empty<Step>()),
             new("Compilation de la solution", "Solution compilée", Color.FromHex("#61AFEF"), () => DotNetCli.RunAsync("build", solution, "--no-restore")),
             new("Exécution des tests", "Tests réussis", Color.FromHex("#E5C07B"), () => DotNetCli.RunAsync("test", solution, "--no-build")),
+
+            // Last, so a Docker problem (image download, port) doesn't get in the way of the build and tests.
+            .. (database is { UseDocker: true }
+                ?
+                [
+                    new Step("Démarrage de SQL Server dans Docker", "SQL Server démarré dans Docker", Ui.Docker,
+                        () => Docker.StartSqlServerAsync(outputDir!)),
+                    new Step($"Création de la base {database.Name}", $"Base {database.Name} créée", Ui.Docker,
+                        () => Docker.CreateDatabaseAsync(outputDir!, database.Name, database.SaPassword)),
+                ]
+                : Array.Empty<Step>()),
         ];
 
         // Keeping the existing .gitignore: move it aside while generating, then put it back.
@@ -150,11 +162,14 @@ internal static class Program
             return 1;
         }
 
-        ShowNextSteps(name, outputDir!, modules);
+        ShowNextSteps(name, outputDir!, modules, database);
         return 0;
     }
 
-    private sealed record Step(string Running, string Done, Color Color, Func<Task<DotNetCli.Result>> Run);
+    private sealed record Step(string Running, string Done, Color Color, Func<Task<ProcessRunner.Result>> Run);
+
+    // UseDocker is false when Docker isn't available: the project is still configured, the container just isn't started.
+    private sealed record Database(string Name, string SaPassword, int Port, bool UseDocker);
 
     // One "--modules <id>" per selected module; an empty value turns off the template's default modules.
     private static string[] ModuleArguments(Templates.Choice template, IReadOnlyList<Templates.Module> modules) =>
@@ -162,13 +177,36 @@ internal static class Program
         : modules.Count == 0 ? ["--modules", string.Empty]
         : [.. modules.SelectMany(module => new[] { "--modules", module.Id })];
 
+    // Tells up front what happens with Docker, since starting SQL Server is the slowest step (image download).
+    private static async Task<Database> PrepareDatabaseAsync(string databaseName, string saPassword)
+    {
+        var port = Docker.FindSqlPort();
+        var portInfo = port == Docker.DefaultSqlPort ? $"port {port}" : $"port {port}, car 1433 est déjà utilisé";
+
+        var useDocker = await Docker.IsAvailableAsync();
+        if (useDocker)
+        {
+            Ui.Badge("docker", "SQL Server sera démarré dans un conteneur Docker", Ui.Docker);
+            Ui.Line($"[grey]Image {Docker.SqlServerImage} (téléchargée au premier lancement), {portInfo}[/]");
+        }
+        else
+        {
+            Ui.Badge("docker", $"[{Ui.Warning.ToMarkup()}]Docker n'est pas disponible : SQL Server ne sera pas démarré[/]", Ui.Warning);
+            Ui.Line($"[grey]Le projet sera configuré quand même ({portInfo}). Lancez Docker Desktop, puis docker compose up -d.[/]");
+        }
+
+        return new Database(databaseName, saPassword, port, useDocker);
+    }
+
     // The API reads the full connection string from its user secrets; docker compose reads the password from .env.
     // The secrets go through stdin, so the password doesn't show up in the process list.
-    private static async Task<DotNetCli.Result> ConfigureDatabaseAsync(string outputDir, string name, string saPassword)
+    private static async Task<ProcessRunner.Result> ConfigureDatabaseAsync(string outputDir, string name, Database database)
     {
+        var saPassword = database.SaPassword;
+
         // Quoted, so a ; in the password doesn't end the value.
         var connectionString =
-            $"Server=localhost,1433;Database={name};User Id=sa;Password=\"{saPassword.Replace("\"", "\"\"")}\";TrustServerCertificate=True";
+            $"Server=localhost,{database.Port};Database={database.Name};User Id=sa;Password=\"{saPassword.Replace("\"", "\"\"")}\";TrustServerCertificate=True";
         var secrets = JsonSerializer.Serialize(new { ConnectionStrings = new { Default = connectionString } });
 
         var project = Path.Combine(outputDir, "src", $"{name}.Api");
@@ -182,7 +220,8 @@ internal static class Program
         // Single quotes keep the value literal: docker compose doesn't expand $ in it.
         await File.AppendAllTextAsync(
             Path.Combine(outputDir, ".env"),
-            $"# sa password of the SQL Server container (compose.yaml). Not committed.\nMSSQL_SA_PASSWORD='{saPassword}'\n");
+            $"# sa password of the SQL Server container (compose.yaml). Not committed.\nMSSQL_SA_PASSWORD='{saPassword}'\n"
+            + (database.Port != Docker.DefaultSqlPort ? $"MSSQL_PORT={database.Port}\n" : string.Empty));
         return result;
     }
 
@@ -191,7 +230,7 @@ internal static class Program
     {
         var display = new StepDisplay();
         var finalLines = new List<string>();
-        DotNetCli.Result? failure = null;
+        ProcessRunner.Result? failure = null;
 
         // Pad labels to the longest one so the durations stay in place when a label changes.
         // The padding sits inside the color tag, because Spectre trims the description.
@@ -284,6 +323,22 @@ internal static class Program
                     : NameRule)
             .Ask("nom", "Quel nom pour la solution ?");
 
+    // A plain identifier (no dot), so T-SQL and Flyway never need [brackets] around it.
+    // The suggestion is the solution name without its dots: Sample.Orders → SampleOrders.
+    private static string AskDatabaseName(string solutionName) =>
+        new InputPrompt(
+                solutionName.Replace(".", string.Empty),
+                validate: name => ValidDatabaseName().IsMatch(name) ? null : DatabaseNameRule,
+                hint: name => ValidDatabaseName().IsMatch(name) ? "Utilisé dans la chaîne de connexion et par les scripts SQL" : DatabaseNameRule)
+            .Ask("base", "Quel nom pour la base de données ?");
+
+    private const string DatabaseNameRule = "Une lettre, puis lettres, chiffres ou _ (128 au plus), par exemple SampleOrders";
+
+    private static readonly Regex ValidDatabaseNamePattern =
+        new(@"^[A-Za-z][A-Za-z0-9_]{0,127}$", RegexOptions.Compiled);
+
+    private static Regex ValidDatabaseName() => ValidDatabaseNamePattern;
+
     // SQL Server refuses to start with a weak sa password, so check its policy here rather than in the container logs.
     private static string AskSaPassword() =>
         new InputPrompt(
@@ -320,7 +375,7 @@ internal static class Program
             .Value;
     }
 
-    private static void ShowNextSteps(string name, string outputDir, IReadOnlyList<Templates.Module> modules)
+    private static void ShowNextSteps(string name, string outputDir, IReadOnlyList<Templates.Module> modules, Database? database)
     {
         // The step list already ends with a blank line.
         Ui.Line($"[{Ui.Accent.ToMarkup()}]✔[/] [{Ui.Success.ToMarkup()}]Projet initialisé ![/]");
@@ -337,7 +392,38 @@ internal static class Program
             Ui.Line(module.NextStep!);
         }
 
+        if (database is not null)
+        {
+            ShowDatabaseConnection(database);
+        }
+
         AnsiConsole.WriteLine();
+    }
+
+    // The fields as the VS Code mssql extension and SSMS ask for them. The password itself isn't printed.
+    private static void ShowDatabaseConnection(Database database)
+    {
+        Ui.Badge("sql", "Connectez-vous à SQL Server (extension mssql de VS Code, SSMS)", Ui.Docker);
+        if (!database.UseDocker)
+        {
+            Ui.Line("Démarrez d'abord SQL Server avec [#61AFEF]docker compose up -d[/]");
+        }
+
+        var grid = new Grid().AddColumn(new GridColumn().PadRight(2)).AddColumn();
+        foreach (var (label, value) in new[]
+        {
+            ("Serveur", $"localhost,{database.Port}"),
+            ("Authentification", "SQL Login"),
+            ("Utilisateur", "sa"),
+            ("Mot de passe", "celui saisi, aussi dans .env"),
+            ("Base", database.Name),
+            ("Certificat", "Trust server certificate (certificat auto-signé)"),
+        })
+        {
+            grid.AddRow(new Markup($"[grey]{label}[/]"), new Markup($"[#61AFEF]{Markup.Escape(value)}[/]"));
+        }
+
+        AnsiConsole.Write(Ui.Indented(grid));
     }
 
     // "sample-orders" → "Sample.Orders". A trailing "Api" is dropped, since the project name adds ".Api".
