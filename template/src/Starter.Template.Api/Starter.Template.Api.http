@@ -4,3 +4,13 @@ GET {{Starter.Template.Api_HostAddress}}/api/v1/technologies
 Accept: application/json
 
 ###
+
+POST {{Starter.Template.Api_HostAddress}}/api/v1/technologies
+Content-Type: application/json
+
+{
+  "name": "Entity Framework Core",
+  "version": "10.0.0"
+}
+
+###

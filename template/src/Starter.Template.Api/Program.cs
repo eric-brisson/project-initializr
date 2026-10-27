@@ -16,6 +16,14 @@ public class Program
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
 
+        // Error responses (validation failures included) use the RFC 9457 problem details format.
+        builder.Services.AddProblemDetails();
+
+        // Validates minimal API parameters annotated with data annotations ([Required], [StringLength], ...).
+        builder.Services.AddValidation();
+
+        builder.Services.AddFeatures();
+
         var app = builder.Build();
 
         if (app.Environment.IsDevelopment())

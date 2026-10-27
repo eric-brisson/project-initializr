@@ -8,6 +8,7 @@ public static class TechnologiesEndpoints
             .WithTags("Technologies");
 
         ListTechnologies.MapEndpoint(group);
+        AddTechnology.MapEndpoint(group);
 
         return app;
     }
