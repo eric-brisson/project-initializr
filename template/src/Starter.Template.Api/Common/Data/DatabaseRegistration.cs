@@ -14,6 +14,9 @@ public static class DatabaseRegistration
 
         builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
 
+        // Not ready while the database can't be reached.
+        builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>(tags: [Program.ReadyTag]);
+
         return builder;
     }
 #else
@@ -22,6 +25,8 @@ public static class DatabaseRegistration
         builder.Services.AddSingleton<InMemoryDatabase>();
         builder.Services.AddDbContext<AppDbContext>((provider, options) =>
             options.UseSqlite(provider.GetRequiredService<InMemoryDatabase>().ConnectionString));
+
+        builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>(tags: [Program.ReadyTag]);
 
         return builder;
     }

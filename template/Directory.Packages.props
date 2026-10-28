@@ -20,6 +20,9 @@
     <!--#if (UseDatabase) -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
     <!--#endif -->
+    <!--#if (UseDatabase || UseInMemory) -->
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.12" />
+    <!--#endif -->
   </ItemGroup>
   <!--#if (UseDatabase) -->
   <ItemGroup Label="Security">

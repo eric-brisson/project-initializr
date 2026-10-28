@@ -19,6 +19,9 @@
     <!--#if (UseInMemory) -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <!--#endif -->
+    <!--#if (UseDatabase || UseInMemory) -->
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <!--#endif -->
     <!--#if (UseDatabase) -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <!--#endif -->

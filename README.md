@@ -15,6 +15,9 @@ A minimal API organized in vertical slices, with unit and integration tests (xUn
 - `Starter.Template` is replaced everywhere by the name you choose (files, folders,
   namespaces, project references).
 - Central package management (`Directory.Packages.props`).
+- Health checks for Kubernetes probes: `/actuator/health/liveness` (no checks: the process
+  answers) and `/actuator/health/readiness` (checks tagged `ready`, the database included with
+  `inmemory` or `database`).
 - A `UserSecretsId` on the API (a new one per project), so `dotnet user-secrets` works right
   away. In Development, user secrets override the `appsettings` files.
 - Optional modules through the `modules` parameter: `scalar`, `swaggerui` (both by default),

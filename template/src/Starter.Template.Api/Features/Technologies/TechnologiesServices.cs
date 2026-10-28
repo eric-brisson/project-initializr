@@ -4,11 +4,12 @@ public static class TechnologiesServices
 {
     public static IServiceCollection AddTechnologiesServices(this IServiceCollection services)
     {
-#if (UseDatabase || UseInMemory)
-        // Scoped, like the DbContext it uses: one instance per request.
-        services.AddScoped<ITechnologyCatalog, TechnologyCatalog>();
-#else
-        services.AddSingleton<ITechnologyCatalog, TechnologyCatalog>();
+        // Singleton: the built-in list is read from the assemblies once.
+        services.AddSingleton<IBuiltInTechnologies, BuiltInTechnologies>();
+#if (!UseDatabase && !UseInMemory)
+
+        // Singleton too: the added technologies must outlive each request.
+        services.AddSingleton<TechnologyStore>();
 #endif
 
         return services;

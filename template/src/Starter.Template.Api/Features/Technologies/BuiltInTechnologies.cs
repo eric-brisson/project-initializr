@@ -3,9 +3,9 @@ using System.Reflection;
 namespace Starter.Template.Api.Features.Technologies;
 
 // The technologies the project is built with, read from the loaded assemblies.
-public static class BuiltInTechnologies
+public sealed class BuiltInTechnologies : IBuiltInTechnologies
 {
-    public static IReadOnlyList<ListTechnologies.TechnologyDto> All { get; } =
+    public IReadOnlyList<ListTechnologies.TechnologyDto> All { get; } =
     [
         new(".NET", Environment.Version.ToString()),
         new("ASP.NET Core", VersionOf(typeof(WebApplication))),
@@ -21,7 +21,7 @@ public static class BuiltInTechnologies
 #endif
     ];
 
-    public static bool Contains(string name) =>
+    public bool Contains(string name) =>
         All.Any(technology => string.Equals(technology.Name, name, StringComparison.OrdinalIgnoreCase));
 
     private static string VersionOf(Type type)

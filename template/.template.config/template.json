@@ -123,7 +123,10 @@
         },
         {
           "condition": "(UseDatabase || UseInMemory)",
-          "exclude": ["tests/Starter.Template.Api.UnitTests/Features/Technologies/TechnologyCatalogTests.cs"]
+          "exclude": [
+            "src/Starter.Template.Api/Features/Technologies/TechnologyStore.cs",
+            "tests/Starter.Template.Api.UnitTests/Features/Technologies/TechnologyStoreTests.cs"
+          ]
         }
       ]
     }

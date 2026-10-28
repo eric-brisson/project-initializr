@@ -5,21 +5,23 @@ namespace Starter.Template.Api.UnitTests.Features.Technologies;
 
 public class BuiltInTechnologiesTests
 {
+    private readonly BuiltInTechnologies _builtIn = new();
+
     [Fact]
     public void All_IncludesDotNetWithVersion()
     {
-        Assert.Contains(BuiltInTechnologies.All, t => t.Name == ".NET" && t.Version.StartsWith("10."));
+        Assert.Contains(_builtIn.All, t => t.Name == ".NET" && t.Version.StartsWith("10."));
     }
 
     [Fact]
     public void All_EveryTechnologyHasAVersion()
     {
-        Assert.All(BuiltInTechnologies.All, t => Assert.False(string.IsNullOrWhiteSpace(t.Version)));
+        Assert.All(_builtIn.All, t => Assert.False(string.IsNullOrWhiteSpace(t.Version)));
     }
 
     [Fact]
     public void Contains_IgnoresCase()
     {
-        Assert.True(BuiltInTechnologies.Contains(".net"));
+        Assert.True(_builtIn.Contains(".net"));
     }
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 #if (UseScalar)
 using Scalar.AspNetCore;
 #endif
@@ -10,6 +11,9 @@ namespace Starter.Template.Api;
 
 public class Program
 {
+    // Health checks registered with this tag decide readiness, e.g. AddDbContextCheck<AppDbContext>(tags: [Program.ReadyTag]).
+    public const string ReadyTag = "ready";
+
     public static void Main(string[] args)
     {
         // Configuration sources, each overriding the previous ones: appsettings.json, appsettings.{Environment}.json,
@@ -26,6 +30,9 @@ public class Program
 
         // Validates minimal API parameters annotated with data annotations ([Required], [StringLength], ...).
         builder.Services.AddValidation();
+
+        // Probes for the orchestrator (Kubernetes...), mapped under /actuator/health below.
+        builder.Services.AddHealthChecks();
 
         builder.Services.AddFeatures();
 #if (UseDatabase || UseInMemory)
@@ -53,6 +60,16 @@ public class Program
         app.UseHttpsRedirection();
 
         app.UseAuthorization();
+
+        // Liveness: the process is up and answers. It runs no check, so a database outage
+        // makes the app not ready (no traffic) instead of getting it restarted.
+        app.MapHealthChecks("/actuator/health/liveness", new HealthCheckOptions { Predicate = _ => false });
+
+        // Readiness: every check tagged "ready" passes, so the app can take traffic.
+        app.MapHealthChecks("/actuator/health/readiness", new HealthCheckOptions
+        {
+            Predicate = check => check.Tags.Contains(ReadyTag),
+        });
 
         app.MapEndpoints();
 

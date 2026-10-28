@@ -1,30 +1,29 @@
-// Only without a database module: the EF Core catalog is covered by the integration tests.
+// Only without a database module: the EF Core path is covered by the integration tests.
 #if (!UseDatabase && !UseInMemory)
 using Starter.Template.Api.Features.Technologies;
 using Xunit;
 
 namespace Starter.Template.Api.UnitTests.Features.Technologies;
 
-public class TechnologyCatalogTests
+public class TechnologyStoreTests
 {
-    private readonly TechnologyCatalog _catalog = new();
+    private readonly TechnologyStore _store = new();
 
     [Fact]
-    public async Task TryAddAsync_NewTechnology_AddsItAfterTheBuiltInOnes()
+    public void TryAdd_NewTechnology_AddsIt()
     {
-        var added = await _catalog.TryAddAsync(new("New Tech", "1.0.0"), TestContext.Current.CancellationToken);
+        var added = _store.TryAdd(new("New Tech", "1.0.0"));
 
-        var technologies = await _catalog.GetAllAsync(TestContext.Current.CancellationToken);
         Assert.True(added);
-        Assert.Equal(new ListTechnologies.TechnologyDto("New Tech", "1.0.0"), technologies[^1]);
+        Assert.Equal(new ListTechnologies.TechnologyDto("New Tech", "1.0.0"), Assert.Single(_store.GetAll()));
     }
 
     [Fact]
-    public async Task TryAddAsync_SameNameInAnotherCase_IsRejected()
+    public void TryAdd_SameNameInAnotherCase_IsRejected()
     {
-        await _catalog.TryAddAsync(new("New Tech", "1.0.0"), TestContext.Current.CancellationToken);
+        _store.TryAdd(new("New Tech", "1.0.0"));
 
-        var added = await _catalog.TryAddAsync(new("NEW TECH", "2.0.0"), TestContext.Current.CancellationToken);
+        var added = _store.TryAdd(new("NEW TECH", "2.0.0"));
 
         Assert.False(added);
     }
