@@ -1,10 +1,11 @@
 <Project>
 
   <!--#if (false) -->
-  <!-- Demo only: turn every module on, so the template repo builds and tests all of them.
+  <!-- Demo only: turn the modules on, so the template repo builds and tests them.
+       inmemory and database exclude each other: the demo uses database.
        The template engine removes this block from generated projects. -->
   <PropertyGroup>
-    <DefineConstants>$(DefineConstants);UseScalar;UseSwaggerUi</DefineConstants>
+    <DefineConstants>$(DefineConstants);UseScalar;UseSwaggerUi;UseDatabase</DefineConstants>
   </PropertyGroup>
   <!--#endif -->
 

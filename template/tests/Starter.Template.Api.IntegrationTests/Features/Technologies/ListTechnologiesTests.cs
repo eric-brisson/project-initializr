@@ -1,13 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Starter.Template.Api.Features.Technologies;
 using Xunit;
 
 namespace Starter.Template.Api.IntegrationTests.Features.Technologies;
 
-public class ListTechnologiesTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public class ListTechnologiesTests(ApiFactory factory)
 {
     [Fact]
     public async Task GetTechnologies_ReturnsOkWithJsonList()

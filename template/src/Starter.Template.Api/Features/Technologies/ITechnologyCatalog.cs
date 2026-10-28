@@ -2,7 +2,7 @@ namespace Starter.Template.Api.Features.Technologies;
 
 public interface ITechnologyCatalog
 {
-    IReadOnlyList<ListTechnologies.TechnologyDto> GetAll();
+    Task<IReadOnlyList<ListTechnologies.TechnologyDto>> GetAllAsync(CancellationToken cancellationToken);
 
-    bool TryAdd(ListTechnologies.TechnologyDto technology);
+    Task<bool> TryAddAsync(ListTechnologies.TechnologyDto technology, CancellationToken cancellationToken);
 }

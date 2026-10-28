@@ -23,5 +23,22 @@ services:
       retries: 10
       start_period: 20s
 
+  # Applies the scripts of db/migrations: docker compose run --rm flyway
+  # In a profile, so "docker compose up" only starts SQL Server: the database must exist before Flyway runs.
+  # The integration tests use the same image (SqlServerDatabase.cs): keep both tags in sync.
+  flyway:
+    image: flyway/flyway:13.10
+    profiles: [migrations]
+    command: migrate
+    environment:
+      FLYWAY_URL: jdbc:sqlserver://sqlserver:1433;databaseName=StarterTemplate;encrypt=true;trustServerCertificate=true
+      FLYWAY_USER: sa
+      FLYWAY_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
+    volumes:
+      - ./db/migrations:/flyway/sql:ro
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
 volumes:
   sqlserver-data:

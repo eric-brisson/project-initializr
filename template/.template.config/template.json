@@ -22,7 +22,8 @@
       "choices": [
         { "choice": "scalar", "description": "Scalar API reference (/scalar)" },
         { "choice": "swaggerui", "description": "Swagger UI (/swagger)" },
-        { "choice": "database", "description": "SQL Server in docker compose" }
+        { "choice": "inmemory", "description": "EF Core with an in-memory SQLite database (no Docker)" },
+        { "choice": "database", "description": "EF Core with SQL Server in docker compose, Flyway migrations" }
       ],
       "defaultValue": "scalar|swaggerui"
     },
@@ -37,6 +38,11 @@
     "UseDatabase": {
       "type": "computed",
       "value": "(modules == database)"
+    },
+    "UseInMemory": {
+      "type": "computed",
+      "description": "inmemory and database exclude each other: database wins when both are given.",
+      "value": "(modules == inmemory && !(modules == database))"
     },
     "databaseName": {
       "type": "parameter",
@@ -97,7 +103,27 @@
         },
         {
           "condition": "(!UseDatabase)",
-          "exclude": ["compose.yaml"]
+          "exclude": [
+            "compose.yaml",
+            "db/**",
+            "tests/Starter.Template.Api.IntegrationTests/SqlServerDatabase.cs"
+          ]
+        },
+        {
+          "condition": "(!UseInMemory)",
+          "exclude": ["src/Starter.Template.Api/Common/Data/InMemoryDatabase.cs"]
+        },
+        {
+          "condition": "(!UseDatabase && !UseInMemory)",
+          "exclude": [
+            "src/Starter.Template.Api/Common/Data/**",
+            "src/Starter.Template.Api/Features/Technologies/Technology.cs",
+            "src/Starter.Template.Api/Features/Technologies/TechnologyConfiguration.cs"
+          ]
+        },
+        {
+          "condition": "(UseDatabase || UseInMemory)",
+          "exclude": ["tests/Starter.Template.Api.UnitTests/Features/Technologies/TechnologyCatalogTests.cs"]
         }
       ]
     }

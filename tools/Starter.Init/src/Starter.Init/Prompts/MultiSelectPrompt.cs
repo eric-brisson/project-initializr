@@ -4,6 +4,7 @@ using Spectre.Console.Rendering;
 namespace Starter.Init.Prompts;
 
 // Several choices grouped by category: ◼ checked, ◻ unchecked, Space toggles, Enter validates.
+// Exclusive items work like radio buttons within their category: checking one unchecks the others.
 internal sealed class MultiSelectPrompt<T> : InlinePrompt<IReadOnlyList<T>>
 {
     private static readonly Color CheckedColor = Color.FromHex("#A6E22E");
@@ -12,6 +13,7 @@ internal sealed class MultiSelectPrompt<T> : InlinePrompt<IReadOnlyList<T>>
     private readonly Func<T, string> category;
     private readonly Func<T, string> name;
     private readonly Func<T, string?> description;
+    private readonly Func<T, bool> exclusive;
     private readonly HashSet<int> checkedIndexes;
     private int index;
 
@@ -20,13 +22,15 @@ internal sealed class MultiSelectPrompt<T> : InlinePrompt<IReadOnlyList<T>>
         Func<T, string> category,
         Func<T, string> name,
         Func<T, string?> description,
-        Func<T, bool> checkedByDefault)
+        Func<T, bool> checkedByDefault,
+        Func<T, bool>? exclusive = null)
     {
         // Keep items of the same category together, in their order of appearance.
         this.items = items.GroupBy(category).SelectMany(group => group).ToList();
         this.category = category;
         this.name = name;
         this.description = description;
+        this.exclusive = exclusive ?? (_ => false);
         checkedIndexes = [.. Enumerable.Range(0, this.items.Count).Where(i => checkedByDefault(this.items[i]))];
     }
 
@@ -47,7 +51,10 @@ internal sealed class MultiSelectPrompt<T> : InlinePrompt<IReadOnlyList<T>>
             if (category(item) != currentCategory)
             {
                 currentCategory = category(item);
-                rows.Add(new Markup($"[bold]{Markup.Escape(currentCategory)}[/]"));
+                var oneChoice = items.Any(other => category(other) == currentCategory && exclusive(other))
+                    ? " [grey](un seul choix)[/]"
+                    : string.Empty;
+                rows.Add(new Markup($"[bold]{Markup.Escape(currentCategory)}[/]{oneChoice}"));
             }
 
             var box = checkedIndexes.Contains(i) ? $"[{CheckedColor.ToMarkup()}]◼[/]" : "[grey]◻[/]";
@@ -73,6 +80,11 @@ internal sealed class MultiSelectPrompt<T> : InlinePrompt<IReadOnlyList<T>>
             case ConsoleKey.Spacebar:
                 if (!checkedIndexes.Remove(index))
                 {
+                    if (exclusive(items[index]))
+                    {
+                        checkedIndexes.RemoveWhere(i => category(items[i]) == category(items[index]) && exclusive(items[i]));
+                    }
+
                     checkedIndexes.Add(index);
                 }
 

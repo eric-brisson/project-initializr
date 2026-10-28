@@ -14,6 +14,55 @@ internal static class Docker
     public static async Task<bool> IsAvailableAsync() =>
         (await ProcessRunner.RunAsync("docker", ["info", "--format", "{{.ServerVersion}}"])).ExitCode == 0;
 
+    // Checked every 2 seconds until the timeout.
+    public static async Task<bool> WaitUntilAvailableAsync(TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (!await IsAvailableAsync())
+        {
+            if (DateTime.UtcNow >= deadline)
+            {
+                return false;
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(2));
+        }
+
+        return true;
+    }
+
+    // Docker Desktop on macOS and Windows. On Linux, Docker usually runs as a system service the tool can't start.
+    public static bool CanStartDesktop => DesktopApp is not null;
+
+    // Opens the app and returns right away: the engine is ready only later (see WaitUntilAvailableAsync).
+    public static async Task<bool> StartDesktopAsync() =>
+        DesktopApp is { } app
+        && (OperatingSystem.IsMacOS()
+            ? (await ProcessRunner.RunAsync("open", ["-a", app])).ExitCode == 0
+            : StartDetached(app));
+
+    private static string? DesktopApp =>
+        OperatingSystem.IsMacOS()
+            ? new[] { "/Applications/Docker.app", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Applications", "Docker.app") }
+                .FirstOrDefault(Directory.Exists)
+            : OperatingSystem.IsWindows()
+                ? new[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Docker", "Docker", "Docker Desktop.exe") }
+                    .FirstOrDefault(File.Exists)
+                : null;
+
+    private static bool StartDetached(string path)
+    {
+        try
+        {
+            using var _ = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+            return true;
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            return false;
+        }
+    }
+
     // 1433 when it's free, otherwise the first free port from 14330: another SQL Server often holds 1433.
     public static int FindSqlPort() =>
         new[] { DefaultSqlPort }.Concat(Enumerable.Range(14330, 10)).FirstOrDefault(IsPortFree, DefaultSqlPort);
@@ -35,6 +84,11 @@ internal static class Docker
             ],
             workingDirectory: projectDir,
             environment: new Dictionary<string, string> { ["SQLCMDPASSWORD"] = saPassword });
+
+    // The flyway service of compose.yaml applies the scripts of db/migrations to the database created above.
+    // "run" starts it even though it sits in a compose profile, and --rm removes the container once done.
+    public static Task<ProcessRunner.Result> MigrateAsync(string projectDir) =>
+        ProcessRunner.RunAsync("docker", ["compose", "run", "--rm", "flyway"], workingDirectory: projectDir);
 
     // Taken when it can't be bound, or when something already answers on the loopback.
     private static bool IsPortFree(int port)

@@ -1,3 +1,5 @@
+// Only without a database module: the EF Core catalog is covered by the integration tests.
+#if (!UseDatabase && !UseInMemory)
 using Starter.Template.Api.Features.Technologies;
 using Xunit;
 
@@ -8,18 +10,23 @@ public class TechnologyCatalogTests
     private readonly TechnologyCatalog _catalog = new();
 
     [Fact]
-    public void GetAll_IncludesDotNetWithVersion()
+    public async Task TryAddAsync_NewTechnology_AddsItAfterTheBuiltInOnes()
     {
-        var technologies = _catalog.GetAll();
+        var added = await _catalog.TryAddAsync(new("New Tech", "1.0.0"), TestContext.Current.CancellationToken);
 
-        Assert.Contains(technologies, t => t.Name == ".NET" && t.Version.StartsWith("10."));
+        var technologies = await _catalog.GetAllAsync(TestContext.Current.CancellationToken);
+        Assert.True(added);
+        Assert.Equal(new ListTechnologies.TechnologyDto("New Tech", "1.0.0"), technologies[^1]);
     }
 
     [Fact]
-    public void GetAll_EveryTechnologyHasAVersion()
+    public async Task TryAddAsync_SameNameInAnotherCase_IsRejected()
     {
-        var technologies = _catalog.GetAll();
+        await _catalog.TryAddAsync(new("New Tech", "1.0.0"), TestContext.Current.CancellationToken);
 
-        Assert.All(technologies, t => Assert.False(string.IsNullOrWhiteSpace(t.Version)));
+        var added = await _catalog.TryAddAsync(new("NEW TECH", "2.0.0"), TestContext.Current.CancellationToken);
+
+        Assert.False(added);
     }
 }
+#endif

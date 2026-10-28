@@ -69,7 +69,8 @@ internal static class Program
                     module => module.Category,
                     module => module.Name,
                     module => module.Description,
-                    module => module.SelectedByDefault)
+                    module => module.SelectedByDefault,
+                    module => module.Exclusive)
                 .Ask("modules", "Quels modules voulez-vous ajouter ?")
             : [.. template.Modules.Where(module => module.SelectedByDefault)];
 
@@ -151,8 +152,10 @@ internal static class Program
                 [
                     new Step("Démarrage de SQL Server dans Docker", "SQL Server démarré dans Docker",
                         () => Docker.StartSqlServerAsync(outputDir!)),
-                    new Step($"Création de la base {database.Name}", $"Base {database.Name} créée",
+                    new Step($"Création de la database {database.Name}", $"Database {database.Name} créée",
                         () => Docker.CreateDatabaseAsync(outputDir!, database.Name, database.SaPassword)),
+                    new Step("Application des migrations Flyway", "Migrations Flyway appliquées",
+                        () => Docker.MigrateAsync(outputDir!)),
                 ]
                 : Array.Empty<Step>()),
         ];
@@ -210,7 +213,7 @@ internal static class Program
         var port = Docker.FindSqlPort();
         var portInfo = port == Docker.DefaultSqlPort ? $"port {port}" : $"port {port}, car 1433 est déjà utilisé";
 
-        var useDocker = await Docker.IsAvailableAsync();
+        var useDocker = await Docker.IsAvailableAsync() || await AskToStartDockerAsync();
         if (useDocker)
         {
             Ui.Badge("docker", "SQL Server sera démarré dans un conteneur Docker", Ui.Docker);
@@ -223,6 +226,51 @@ internal static class Program
         }
 
         return new Database(databaseName, saPassword, port, useDocker);
+    }
+
+    // Docker Desktop is often just not started yet: offer to start it (or retry) rather than going on without SQL Server.
+    // Returns false when the user chooses to continue without Docker.
+    private static async Task<bool> AskToStartDockerAsync()
+    {
+        const string Start = "Démarrer Docker Desktop", Retry = "Réessayer", Skip = "Continuer sans Docker";
+        string[] choices = Docker.CanStartDesktop ? [Start, Retry, Skip] : [Retry, Skip];
+        var details = Docker.CanStartDesktop
+            ? "Docker Desktop sera lancé, puis l'outil attendra qu'il soit prêt"
+            : "Lancez Docker, puis choisissez Réessayer";
+
+        while (true)
+        {
+            var choice = new SelectPrompt<string>(choices, choice => choice, choice => choice switch
+                {
+                    Start => details,
+                    Retry => "une fois Docker lancé",
+                    _ => "le projet sera configuré, sans démarrer SQL Server",
+                })
+                .Ask("docker", $"[{Ui.Warning.ToMarkup()}]Docker n'est pas disponible.[/] Que voulez-vous faire ?");
+
+            if (choice == Skip)
+            {
+                return false;
+            }
+
+            if (choice == Start && !await Docker.StartDesktopAsync())
+            {
+                Ui.Line($"[{Ui.Warning.ToMarkup()}]Impossible de lancer Docker Desktop : lancez-le vous-même, puis choisissez Réessayer[/]");
+                continue;
+            }
+
+            // Docker Desktop takes a while to start its engine after the app opens.
+            var timeout = choice == Start ? TimeSpan.FromMinutes(2) : TimeSpan.FromSeconds(5);
+            var available = await AnsiConsole.Status()
+                .Spinner(Spinner.Known.Dots)
+                .StartAsync($"{Ui.Indent}[grey]En attente de Docker...[/]", _ => Docker.WaitUntilAvailableAsync(timeout));
+            if (available)
+            {
+                return true;
+            }
+
+            Ui.Line($"[{Ui.Warning.ToMarkup()}]Docker ne répond toujours pas[/]");
+        }
     }
 
     // The API reads the full connection string from its user secrets; docker compose reads the password from .env.
@@ -480,7 +528,8 @@ internal static class Program
         Ui.Badge("sql", "Connectez-vous à SQL Server (extension mssql de VS Code, SSMS)", Ui.Docker);
         if (!database.UseDocker)
         {
-            Ui.Line("Démarrez d'abord SQL Server avec [#61AFEF]docker compose up -d[/]");
+            Ui.Line("Démarrez d'abord SQL Server avec [#61AFEF]docker compose up -d[/], créez la base,");
+            Ui.Line("puis appliquez les migrations avec [#61AFEF]docker compose run --rm flyway[/]");
         }
 
         AnsiConsole.Write(Ui.Indented(Ui.Details(new[]

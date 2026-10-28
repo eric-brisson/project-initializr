@@ -1,5 +1,40 @@
-using System.Reflection;
+#if (UseDatabase || UseInMemory)
+using Microsoft.EntityFrameworkCore;
+using Starter.Template.Api.Common.Data;
 
+namespace Starter.Template.Api.Features.Technologies;
+
+// The built-in technologies, followed by the ones added through the API and stored in the database.
+public sealed class TechnologyCatalog(AppDbContext db) : ITechnologyCatalog
+{
+    public async Task<IReadOnlyList<ListTechnologies.TechnologyDto>> GetAllAsync(CancellationToken cancellationToken)
+    {
+        var added = await db.Technologies
+            .AsNoTracking()
+            .OrderBy(technology => technology.Id)
+            .Select(technology => new ListTechnologies.TechnologyDto(technology.Name, technology.Version))
+            .ToListAsync(cancellationToken);
+
+        return [.. BuiltInTechnologies.All, .. added];
+    }
+
+    public async Task<bool> TryAddAsync(ListTechnologies.TechnologyDto technology, CancellationToken cancellationToken)
+    {
+        // Upper-cased on both sides, since SQL Server compares names case-insensitively by default and SQLite doesn't.
+        // The unique index on Name still rejects a duplicate inserted by a concurrent request.
+        var name = technology.Name.ToUpperInvariant();
+        if (BuiltInTechnologies.Contains(technology.Name)
+            || await db.Technologies.AnyAsync(existing => existing.Name.ToUpper() == name, cancellationToken))
+        {
+            return false;
+        }
+
+        db.Technologies.Add(new Technology { Name = technology.Name, Version = technology.Version });
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+}
+#else
 namespace Starter.Template.Api.Features.Technologies;
 
 // Registered as a singleton, so the added technologies live in memory until the app restarts.
@@ -8,48 +43,27 @@ public sealed class TechnologyCatalog : ITechnologyCatalog
     private readonly Lock _lock = new();
     private readonly List<ListTechnologies.TechnologyDto> _added = [];
 
-    public IReadOnlyList<ListTechnologies.TechnologyDto> GetAll()
+    public Task<IReadOnlyList<ListTechnologies.TechnologyDto>> GetAllAsync(CancellationToken cancellationToken)
     {
         lock (_lock)
         {
-            return [.. BuiltIn(), .. _added];
+            return Task.FromResult<IReadOnlyList<ListTechnologies.TechnologyDto>>([.. BuiltInTechnologies.All, .. _added]);
         }
     }
 
-    public bool TryAdd(ListTechnologies.TechnologyDto technology)
+    public Task<bool> TryAddAsync(ListTechnologies.TechnologyDto technology, CancellationToken cancellationToken)
     {
         lock (_lock)
         {
-            if (BuiltIn().Concat(_added).Any(t => string.Equals(t.Name, technology.Name, StringComparison.OrdinalIgnoreCase)))
+            if (BuiltInTechnologies.Contains(technology.Name)
+                || _added.Any(t => string.Equals(t.Name, technology.Name, StringComparison.OrdinalIgnoreCase)))
             {
-                return false;
+                return Task.FromResult(false);
             }
 
             _added.Add(technology);
-            return true;
+            return Task.FromResult(true);
         }
     }
-
-    private static List<ListTechnologies.TechnologyDto> BuiltIn() =>
-    [
-        new(".NET", Environment.Version.ToString()),
-        new("ASP.NET Core", VersionOf(typeof(WebApplication))),
-        new("OpenAPI", VersionOf(typeof(Microsoft.AspNetCore.OpenApi.OpenApiOptions))),
-#if (UseScalar)
-        new("Scalar", VersionOf(typeof(Scalar.AspNetCore.ScalarOptions))),
-#endif
-#if (UseSwaggerUi)
-        new("Swagger UI", VersionOf(typeof(Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIOptions))),
-#endif
-    ];
-
-    private static string VersionOf(Type type)
-    {
-        var version = type.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            ?? type.Assembly.GetName().Version?.ToString()
-            ?? "unknown";
-
-        // Drop the "+<commit hash>" suffix added to informational versions.
-        return version.Split('+')[0];
-    }
 }
+#endif

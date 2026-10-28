@@ -14,7 +14,17 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="xunit.v3" />
+    <!--#if (UseDatabase) -->
+    <PackageReference Include="Testcontainers.MsSql" />
+    <!--#endif -->
   </ItemGroup>
+
+  <!--#if (UseDatabase) -->
+  <!-- The Flyway scripts, copied next to the test assembly for SqlServerDatabase. -->
+  <ItemGroup>
+    <None Include="..\..\db\migrations\*.sql" LinkBase="migrations" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!--#endif -->
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>

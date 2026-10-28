@@ -8,23 +8,23 @@ namespace Starter.Template.Api.UnitTests.Features.Technologies;
 public class AddTechnologyTests
 {
     [Fact]
-    public void Handle_NewTechnology_ReturnsCreated()
+    public async Task Handle_NewTechnology_ReturnsCreated()
     {
-        var catalog = new TechnologyCatalog();
+        var catalog = new FakeTechnologyCatalog();
 
-        var result = AddTechnology.Handle(new("New Tech", "1.0.0"), catalog);
+        var result = await AddTechnology.Handle(new("New Tech", "1.0.0"), catalog, TestContext.Current.CancellationToken);
 
         var created = Assert.IsType<CreatedAtRoute<ListTechnologies.TechnologyDto>>(result.Result);
         Assert.Equal(new ListTechnologies.TechnologyDto("New Tech", "1.0.0"), created.Value);
-        Assert.Contains(created.Value, catalog.GetAll());
+        Assert.Contains(created.Value, await catalog.GetAllAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public void Handle_ExistingTechnology_ReturnsConflict()
+    public async Task Handle_ExistingTechnology_ReturnsConflict()
     {
-        var catalog = new TechnologyCatalog();
+        var catalog = new FakeTechnologyCatalog(new ListTechnologies.TechnologyDto("Existing", "1.0.0"));
 
-        var result = AddTechnology.Handle(new(".net", "1.0.0"), catalog);
+        var result = await AddTechnology.Handle(new("Existing", "2.0.0"), catalog, TestContext.Current.CancellationToken);
 
         var problem = Assert.IsType<ProblemHttpResult>(result.Result);
         Assert.Equal(StatusCodes.Status409Conflict, problem.StatusCode);

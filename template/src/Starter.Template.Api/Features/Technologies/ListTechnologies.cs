@@ -13,8 +13,11 @@ public static class ListTechnologies
     }
 
     // Services registered in the DI container are injected as handler parameters.
-    internal static Ok<IReadOnlyList<TechnologyDto>> Handle(ITechnologyCatalog catalog)
+    // The CancellationToken is bound to the request: it's cancelled if the client disconnects.
+    internal static async Task<Ok<IReadOnlyList<TechnologyDto>>> Handle(
+        ITechnologyCatalog catalog,
+        CancellationToken cancellationToken)
     {
-        return TypedResults.Ok(catalog.GetAll());
+        return TypedResults.Ok(await catalog.GetAllAsync(cancellationToken));
     }
 }

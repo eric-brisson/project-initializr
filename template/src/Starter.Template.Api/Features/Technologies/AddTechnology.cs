@@ -17,13 +17,14 @@ public static class AddTechnology
 
     // The request is bound from the JSON body and validated before the handler runs
     // (see AddValidation in Program.cs): an invalid body gets a 400 problem details response.
-    internal static Results<CreatedAtRoute<ListTechnologies.TechnologyDto>, ProblemHttpResult> Handle(
+    internal static async Task<Results<CreatedAtRoute<ListTechnologies.TechnologyDto>, ProblemHttpResult>> Handle(
         AddTechnologyRequest request,
-        ITechnologyCatalog catalog)
+        ITechnologyCatalog catalog,
+        CancellationToken cancellationToken)
     {
         var technology = new ListTechnologies.TechnologyDto(request.Name, request.Version);
 
-        if (!catalog.TryAdd(technology))
+        if (!await catalog.TryAddAsync(technology, cancellationToken))
         {
             return TypedResults.Problem(
                 statusCode: StatusCodes.Status409Conflict,

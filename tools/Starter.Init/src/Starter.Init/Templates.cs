@@ -3,13 +3,15 @@ namespace Starter.Init;
 internal static class Templates
 {
     // NextStep, when set, is shown in the final "suite" block if the module was selected.
+    // At most one Exclusive module per category can be selected: checking one unchecks the others.
     public sealed record Module(
         string Category,
         string Id,
         string Name,
         string Description,
         bool SelectedByDefault,
-        string? NextStep = null);
+        string? NextStep = null,
+        bool Exclusive = false);
 
     public sealed record Choice(string Name, string Description, string ShortName, IReadOnlyList<Module> Modules);
 
@@ -25,8 +27,11 @@ internal static class Templates
                 "Explorez l'API sur [#61AFEF]/scalar[/]"),
             new("Documentation", "swaggerui", "Swagger UI", "interface Swagger classique", false,
                 "Ou avec Swagger UI sur [#61AFEF]/swagger[/]"),
+            new("Données", "inmemory", "SQLite en mémoire", "base relationnelle sans Docker, vidée à chaque démarrage", false,
+                "Les données ajoutées sont perdues à chaque redémarrage de l'API (SQLite en mémoire)", Exclusive: true),
             // No NextStep: Program shows the connection details instead.
-            new("Données", DatabaseId, "SQL Server", "conteneur Docker avec la base du projet", false),
+            new("Données", DatabaseId, "SQL Server", "conteneur Docker avec la base du projet, migrations Flyway", false,
+                Exclusive: true),
         ]),
     ];
 }

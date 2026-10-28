@@ -2,6 +2,9 @@
 using Scalar.AspNetCore;
 #endif
 using Starter.Template.Api.Common;
+#if (UseDatabase || UseInMemory)
+using Starter.Template.Api.Common.Data;
+#endif
 
 namespace Starter.Template.Api;
 
@@ -9,6 +12,8 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        // Configuration sources, each overriding the previous ones: appsettings.json, appsettings.{Environment}.json,
+        // user secrets (Development only: dotnet user-secrets set <key> <value>), environment variables, command line.
         var builder = WebApplication.CreateBuilder(args);
 
         builder.Services.AddAuthorization();
@@ -23,8 +28,16 @@ public class Program
         builder.Services.AddValidation();
 
         builder.Services.AddFeatures();
+#if (UseDatabase || UseInMemory)
+
+        builder.AddDatabase();
+#endif
 
         var app = builder.Build();
+#if (UseInMemory)
+
+        app.CreateDatabase();
+#endif
 
         if (app.Environment.IsDevelopment())
         {
