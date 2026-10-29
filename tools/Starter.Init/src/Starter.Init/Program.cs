@@ -8,7 +8,7 @@ using Starter.Init.Prompts;
 
 namespace Starter.Init;
 
-internal static class Program
+internal static partial class Program
 {
     public static async Task<int> Main(string[] args)
     {
@@ -20,14 +20,17 @@ internal static class Program
 
         ShowIntro();
 
-        // Arguments skip every prompt (for scripts): starter-init <name> [folder].
-        // The first template and its default modules are used.
-        var interactive = args.Length == 0;
+        // starter-init feature [Name] adds a feature to the solution of the current folder.
+        var featureCommand = args.Length > 0 && args[0] == FeatureCommand;
+
+        // Arguments skip every prompt (for scripts): starter-init <name> [folder], or starter-init feature <Name>.
+        // For a project, the first template and its default modules are used.
+        var interactive = args.Length == (featureCommand ? 1 : 0);
         if (interactive && !Keyboard.IsAvailable)
         {
             Ui.Fail("Ce terminal ne permet pas les questions interactives.");
             Ui.Line("[grey]Lancez l'outil dans un vrai terminal (Windows Terminal, PowerShell), pas dans la fenêtre « Run » d'un IDE,[/]");
-            Ui.Line("[grey]ou passez le nom en argument, par exemple : starter-init Sample.Orders[/]");
+            Ui.Line("[grey]ou passez le nom en argument, par exemple : starter-init Sample.Orders ou starter-init feature Account[/]");
             return 1;
         }
 
@@ -36,6 +39,16 @@ internal static class Program
         if (interactive)
         {
             AnsiConsole.Profile.Capabilities.Interactive = true;
+        }
+
+        if (featureCommand)
+        {
+            return await AddFeatureAsync(interactive ? null : args[1]);
+        }
+
+        if (interactive && AskAddFeature(FindStarterProject(Directory.GetCurrentDirectory())))
+        {
+            return await AddFeatureAsync(null);
         }
 
         // The template comes first: the other questions depend on the project type.
@@ -87,7 +100,7 @@ internal static class Program
         if (!await DotNetCli.IsTemplateInstalledAsync(template.ShortName))
         {
             Ui.Fail($"Le modèle '{template.ShortName}' n'est pas installé.");
-            Ui.Line("[grey]Depuis le dépôt du modèle, lancez : dotnet new install .[/]");
+            Ui.Line("[grey]Depuis le dépôt des modèles, lancez : dotnet new install ./templates[/]");
             return 1;
         }
 

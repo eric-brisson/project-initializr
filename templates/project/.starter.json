@@ -1,0 +1,13 @@
+{
+  // Read by "starter-init feature" to generate features that match this project.
+  "solution": "Starter.Template",
+  //#if (!UseDatabase && !UseInMemory)
+  "data": "none"
+  //#endif
+  //#if (UseInMemory)
+  "data": "sqlite"
+  //#endif
+  //#if (UseDatabase)
+  "data": "sqlserver"
+  //#endif
+}

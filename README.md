@@ -1,14 +1,21 @@
 # Project Initializr
 
 A Spring Initializr-style starter for .NET 10 APIs: a `dotnet new` template that is also a
-working demo solution, and an interactive CLI that drives it.
+working demo solution, a template that adds features to it, and an interactive CLI that drives both.
 
 ```
-template/             dotnet new template (short name: starter-api)
+templates/project/    dotnet new project template (short name: project-initializr)
+templates/feature/    dotnet new item template for a CRUD feature (short name: starter-feature)
 tools/Starter.Init/   Spectre.Console CLI (command: starter-init)
 ```
 
-## The template
+Install (or, after a change, reinstall with `--force`) both templates at once:
+
+```bash
+dotnet new install ./templates
+```
+
+## The project template
 
 A minimal API organized in vertical slices, with unit and integration tests (xUnit v3).
 
@@ -40,14 +47,33 @@ A minimal API organized in vertical slices, with unit and integration tests (xUn
   The demo enables `scalar`, `swaggerui` and `database` (see `Directory.Build.props`), so the
   repo always builds and tests them; check `inmemory` by generating a project.
 
+- A `.starter.json` at the root records the solution name and the data module, for the
+  feature template (see below).
+
 ```bash
-dotnet new install ./template
-dotnet new starter-api -n Sample.Orders -o ./Sample.Orders
-dotnet new starter-api -n Sample.Orders -o ./Sample.Orders --modules scalar
-dotnet new starter-api -n Sample.Orders -o ./Sample.Orders --modules ""
+dotnet new project-initializr -n Sample.Orders -o ./Sample.Orders
+dotnet new project-initializr -n Sample.Orders -o ./Sample.Orders --modules scalar
+dotnet new project-initializr -n Sample.Orders -o ./Sample.Orders --modules ""
 ```
 
-After changing the template, reinstall it with `dotnet new install ./template --force`.
+## The feature template
+
+Adds a CRUD feature to a generated solution: `Features/<Plural>` with the five slices (list,
+get, create, update, delete), the entity, its DTO, the endpoint and service registrations,
+and one integration test file per endpoint. The entity starts with `Id` and `Name`, and
+`// TODO` comments mark where your own properties go. With a data module (`--storage efcore`),
+the handlers use `AppDbContext` and an `IEntityTypeConfiguration` maps the entity; without one
+(`--storage memory`), they use a singleton in-memory store.
+
+It only adds files. Wire the feature yourself: `Map<Plural>Endpoints()` in
+`Common/EndpointRegistration.cs` and `Add<Plural>Services()` in `Common/ServiceRegistration.cs`.
+With SQL Server, also create the table in a new Flyway script. The feature's integration tests
+fail until then.
+
+```bash
+cd Sample.Orders
+dotnet new starter-feature -n Account --plural Accounts --solution Sample.Orders --storage efcore
+```
 
 ## The CLI
 
@@ -73,6 +99,16 @@ For scripts, pass the name (and optionally the folder) to skip every prompt:
 
 ```bash
 dotnet run --project tools/Starter.Init/src/Starter.Init -- Sample.Orders ./Sample.Orders
+```
+
+To add a feature, run it from the generated solution (or a subfolder) and choose « Ajouter une
+feature », or pass `feature` and the name. It reads `.starter.json` to match the data module,
+asks for the name and its plural, generates and builds, then prints the lines to wire and where
+they go (and, with SQL Server, the next Flyway script to write). It doesn't run the tests, since
+they fail until the feature is wired.
+
+```bash
+starter-init feature Account
 ```
 
 To install it as a .NET tool:

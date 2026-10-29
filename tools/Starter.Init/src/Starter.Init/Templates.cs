@@ -15,6 +15,9 @@ internal static class Templates
 
     public sealed record Choice(string Name, string Description, string ShortName, IReadOnlyList<Module> Modules);
 
+    // The item template that adds a feature to a generated solution (starter-init feature).
+    public const string FeatureShortName = "starter-feature";
+
     // Selecting this module asks for the sa password, stored in the API's user secrets and in .env.
     public const string DatabaseId = "database";
 

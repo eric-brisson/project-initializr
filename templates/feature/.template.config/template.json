@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Starter Maintainers",
+  "classifications": ["Web", "API", "Feature"],
+  "identity": "Starter.Feature",
+  "name": "Project Initializr feature",
+  "shortName": "starter-feature",
+  "description": "A CRUD feature (vertical slices and integration tests) for a project-initializr solution. Run it from the solution folder.",
+  "sourceName": "Widget",
+  "preferNameDirectory": false,
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "symbols": {
+    "plural": {
+      "type": "parameter",
+      "datatype": "string",
+      "isRequired": true,
+      "description": "Plural of the name, used for the folder, the route and the table (Account → Accounts).",
+      "replaces": "Widgets",
+      "fileRename": "Widgets"
+    },
+    "solution": {
+      "type": "parameter",
+      "datatype": "string",
+      "isRequired": true,
+      "description": "Solution name, as in src/<solution>.Api (e.g. Sample.Orders).",
+      "replaces": "Starter.Template",
+      "fileRename": "Starter.Template"
+    },
+    "storage": {
+      "type": "parameter",
+      "datatype": "choice",
+      "description": "Where the feature stores its data: EF Core (inmemory or database module) or an in-memory store (no data module).",
+      "choices": [
+        { "choice": "efcore", "description": "AppDbContext" },
+        { "choice": "memory", "description": "Singleton in-memory store" }
+      ],
+      "defaultValue": "efcore"
+    },
+    "UseEfCore": {
+      "type": "computed",
+      "value": "(storage == efcore)"
+    },
+    "routeKebab": {
+      "type": "generated",
+      "generator": "regex",
+      "parameters": {
+        "source": "plural",
+        "steps": [{ "regex": "([a-z0-9])([A-Z])", "replacement": "$1-$2" }]
+      }
+    },
+    "route": {
+      "type": "generated",
+      "generator": "casing",
+      "description": "The route segment: the plural in kebab case (UserProfiles → user-profiles).",
+      "replaces": "widgets",
+      "parameters": { "source": "routeKebab", "toLower": true }
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(UseEfCore)",
+          "exclude": ["src/Starter.Template.Api/Features/Widgets/WidgetStore.cs"]
+        },
+        {
+          "condition": "(!UseEfCore)",
+          "exclude": ["src/Starter.Template.Api/Features/Widgets/WidgetConfiguration.cs"]
+        }
+      ]
+    }
+  ],
+  "postActions": [
+    {
+      "description": "How to wire the feature.",
+      "manualInstructions": [
+        {
+          "text": "Wire the feature: call Map<Plural>Endpoints() in Common/EndpointRegistration.cs and Add<Plural>Services() in Common/ServiceRegistration.cs, then fill in the TODOs."
+        }
+      ],
+      "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+      "continueOnError": true
+    }
+  ]
+}
