@@ -44,6 +44,22 @@
       "description": "inmemory and database exclude each other: database wins when both are given.",
       "value": "(modules == inmemory && !(modules == database))"
     },
+    "launchUrl": {
+      "type": "generated",
+      "generator": "switch",
+      "description": "Page opened by the debugger (launchSettings.json): Scalar when selected, otherwise Swagger UI, otherwise the technologies endpoint. The template keeps scalar, so the repo opens Scalar.",
+      "replaces": "scalar",
+      "onlyIf": [{ "after": "\"launchUrl\": \"" }],
+      "parameters": {
+        "evaluator": "C++",
+        "datatype": "string",
+        "cases": [
+          { "condition": "(UseScalar)", "value": "scalar" },
+          { "condition": "(UseSwaggerUi)", "value": "swagger" },
+          { "condition": "(true)", "value": "api/v1/technologies" }
+        ]
+      }
+    },
     "databaseName": {
       "type": "parameter",
       "datatype": "string",
