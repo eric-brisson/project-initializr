@@ -1,9 +1,28 @@
-# Local SQL Server for development. The sa password comes from .env (not committed),
-# written by starter-init along with the API's user secrets.
-# Start it with: docker compose up -d
-# The project name fixes the container (starter-template-sqlserver-1) and volume names, whatever the folder is called.
+# Runs the API in a container, built from its Dockerfile: docker compose up --build
+#if (UseDatabase)
+# For development (dotnet run), start only SQL Server: docker compose up -d sqlserver
+# The sa password comes from .env (not committed), written by starter-init along with the API's user secrets.
+#endif
+# The project name fixes the container, image and volume names, whatever the folder is called.
 name: starter-template
 services:
+  api:
+    build:
+      context: .
+      dockerfile: src/Starter.Template.Api/Dockerfile
+    # Production settings (appsettings.json), as when deployed: no Scalar or Swagger UI, which are Development only.
+    # Set API_PORT in .env if another app already uses 8080.
+    ports:
+      - "${API_PORT:-8080}:8080"
+#if (UseDatabase)
+    environment:
+      # The database must exist and be migrated (starter-init does both). The password is quoted so a ; in it
+      # doesn't end the value, which means it can't contain a double quote.
+      ConnectionStrings__Default: 'Server=sqlserver,1433;Database=StarterTemplate;User Id=sa;Password="${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}";TrustServerCertificate=True'
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     # Microsoft only publishes amd64 images; Docker Desktop emulates it on Apple Silicon.
@@ -24,7 +43,7 @@ services:
       start_period: 20s
 
   # Applies the scripts of db/migrations: docker compose run --rm flyway
-  # In a profile, so "docker compose up" only starts SQL Server: the database must exist before Flyway runs.
+  # In a profile, so "docker compose up" doesn't run it: the database must exist before Flyway runs.
   # The integration tests use the same image (SqlServerDatabase.cs): keep both tags in sync.
   flyway:
     image: flyway/flyway:13.10
@@ -42,3 +61,4 @@ services:
 
 volumes:
   sqlserver-data:
+#endif

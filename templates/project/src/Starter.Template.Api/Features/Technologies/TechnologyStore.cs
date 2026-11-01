@@ -1,32 +1,79 @@
 namespace Starter.Template.Api.Features.Technologies;
 
-// The technologies added through the API. Registered as a singleton, so they live in memory until the app restarts.
-// Add a database module (inmemory or database) to store them with EF Core instead.
+// The Technologies, kept in memory until the app restarts (registered as a singleton), for a project without
+// a data module. Names are unique in any case, like the unique index of the database version.
 public sealed class TechnologyStore
 {
     private readonly Lock _lock = new();
-    private readonly List<ListTechnologies.TechnologyDto> _technologies = [];
+    private readonly Dictionary<int, Technology> _items = [];
+    private int _lastId;
 
-    public IReadOnlyList<ListTechnologies.TechnologyDto> GetAll()
+    public enum ReplaceResult
+    {
+        Replaced,
+        NotFound,
+        NameTaken,
+    }
+
+    public IReadOnlyList<Technology> GetAll()
     {
         lock (_lock)
         {
-            return [.. _technologies];
+            return [.. _items.Values.OrderBy(item => item.Id)];
         }
     }
 
-    // False when a technology with the same name (in any case) is already stored.
-    public bool TryAdd(ListTechnologies.TechnologyDto technology)
+    public Technology? Find(int id)
     {
         lock (_lock)
         {
-            if (_technologies.Any(t => string.Equals(t.Name, technology.Name, StringComparison.OrdinalIgnoreCase)))
+            return _items.GetValueOrDefault(id);
+        }
+    }
+
+    // Gives the Technology its id. False when another one already has the name.
+    public bool TryAdd(Technology item)
+    {
+        lock (_lock)
+        {
+            if (IsNameTaken(item.Name, item.Id))
             {
                 return false;
             }
 
-            _technologies.Add(technology);
+            item.Id = ++_lastId;
+            _items[item.Id] = item;
             return true;
         }
     }
+
+    public ReplaceResult TryReplace(Technology item)
+    {
+        lock (_lock)
+        {
+            if (!_items.ContainsKey(item.Id))
+            {
+                return ReplaceResult.NotFound;
+            }
+
+            if (IsNameTaken(item.Name, item.Id))
+            {
+                return ReplaceResult.NameTaken;
+            }
+
+            _items[item.Id] = item;
+            return ReplaceResult.Replaced;
+        }
+    }
+
+    public bool Remove(int id)
+    {
+        lock (_lock)
+        {
+            return _items.Remove(id);
+        }
+    }
+
+    private bool IsNameTaken(string name, int exceptId) =>
+        _items.Values.Any(other => other.Id != exceptId && string.Equals(other.Name, name, StringComparison.OrdinalIgnoreCase));
 }

@@ -235,7 +235,7 @@ internal static partial class Program
         else
         {
             Ui.Badge("docker", $"[{Ui.Warning.ToMarkup()}]Docker n'est pas disponible : SQL Server ne sera pas démarré[/]", Ui.Warning);
-            Ui.Line($"[grey]Le projet sera configuré quand même ({portInfo}). Lancez Docker Desktop, puis docker compose up -d.[/]");
+            Ui.Line($"[grey]Le projet sera configuré quand même ({portInfo}). Lancez Docker Desktop, puis docker compose up -d sqlserver.[/]");
         }
 
         return new Database(databaseName, saPassword, port, useDocker);
@@ -541,7 +541,7 @@ internal static partial class Program
         Ui.Badge("sql", "Connectez-vous à SQL Server (extension mssql de VS Code, SSMS)", Ui.Docker);
         if (!database.UseDocker)
         {
-            Ui.Line("Démarrez d'abord SQL Server avec [#61AFEF]docker compose up -d[/], créez la base,");
+            Ui.Line("Démarrez d'abord SQL Server avec [#61AFEF]docker compose up -d sqlserver[/], créez la base,");
             Ui.Line("puis appliquez les migrations avec [#61AFEF]docker compose run --rm flyway[/]");
         }
 

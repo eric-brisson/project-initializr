@@ -79,7 +79,7 @@ internal static partial class Program
             new("Génération de la feature", "Feature générée", () => DotNetCli.RunAsync(
             [
                 "new", Templates.FeatureShortName, "--name", name, "--plural", plural,
-                "--solution", project.Solution, "--storage", project.Data == "none" ? "memory" : "efcore",
+                "--solution", project.Solution, "--data", project.Data,
                 "--output", project.Root,
             ])),
 
@@ -166,7 +166,7 @@ internal static partial class Program
                 "docker compose run --rm flyway");
         }
 
-        Instruction($"Complétez les TODO : les propriétés de {name}, de {name}Dto et des requêtes de création et de modification.");
+        Instruction($"Complétez les TODO : les propriétés de {name}, de {name}Dto (et sa Projection) et des requêtes de création et de modification.");
 
         Ui.Line(project.Data == "sqlserver"
             ? $"[grey]Les tests d'intégration de {plural} échouent tant que la feature n'est pas branchée et la table créée.[/]"

@@ -17,6 +17,9 @@ public static class DatabaseRegistration
         // Not ready while the database can't be reached.
         builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>(tags: [Program.ReadyTag]);
 
+        // A duplicate value in a unique index gets a 409 Conflict instead of a 500.
+        builder.Services.AddExceptionHandler<UniqueConstraintExceptionHandler>();
+
         return builder;
     }
 #else
@@ -27,6 +30,9 @@ public static class DatabaseRegistration
             options.UseSqlite(provider.GetRequiredService<InMemoryDatabase>().ConnectionString));
 
         builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>(tags: [Program.ReadyTag]);
+
+        // A duplicate value in a unique index gets a 409 Conflict instead of a 500.
+        builder.Services.AddExceptionHandler<UniqueConstraintExceptionHandler>();
 
         return builder;
     }

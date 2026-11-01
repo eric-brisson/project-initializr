@@ -1,11 +1,29 @@
 <Project>
 
+  <!-- Shared by every project of the solution. A .csproj can still override a property. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Code quality: the .NET analyzers at their recommended level, the style rules of .editorconfig checked
+       by the build (not only in the IDE), and every warning fails the build, so none pile up. -->
+  <PropertyGroup>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Needed by IDE0005 (unnecessary using) at build time. CS1591 would ask for an XML comment on every public member. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
   <!--#if (false) -->
   <!-- Demo only: turn the modules on, so the template repo builds and tests them.
        inmemory and database exclude each other: the demo uses database.
        The template engine removes this block from generated projects. -->
   <PropertyGroup>
-    <DefineConstants>$(DefineConstants);UseScalar;UseSwaggerUi;UseDatabase</DefineConstants>
+    <DefineConstants>$(DefineConstants);UseScalar;UseSwaggerUi;UseDatabase;UseEfCore</DefineConstants>
   </PropertyGroup>
   <!--#endif -->
 

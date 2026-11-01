@@ -1,9 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <!-- Replaced by a new id for each generated project (see "guids" in template.json). -->
     <UserSecretsId>e6a7d71c-b404-43dd-9bfb-5e781c80e435</UserSecretsId>
   </PropertyGroup>
@@ -19,7 +16,7 @@
     <!--#if (UseInMemory) -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <!--#endif -->
-    <!--#if (UseDatabase || UseInMemory) -->
+    <!--#if (UseEfCore) -->
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
     <!--#endif -->
     <!--#if (UseDatabase) -->

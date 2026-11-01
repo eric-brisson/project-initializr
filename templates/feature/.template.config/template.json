@@ -5,8 +5,8 @@
   "identity": "Starter.Feature",
   "name": "Project Initializr feature",
   "shortName": "starter-feature",
-  "description": "A CRUD feature (vertical slices and integration tests) for a project-initializr solution. Run it from the solution folder.",
-  "sourceName": "Widget",
+  "description": "A CRUD feature (vertical slices and tests) for a project-initializr solution, made from its Technologies feature. Run it from the solution folder.",
+  "sourceName": "Technology",
   "preferNameDirectory": false,
   "tags": {
     "language": "C#",
@@ -18,8 +18,8 @@
       "datatype": "string",
       "isRequired": true,
       "description": "Plural of the name, used for the folder, the route and the table (Account → Accounts).",
-      "replaces": "Widgets",
-      "fileRename": "Widgets"
+      "replaces": "Technologies",
+      "fileRename": "Technologies"
     },
     "solution": {
       "type": "parameter",
@@ -29,19 +29,33 @@
       "replaces": "Starter.Template",
       "fileRename": "Starter.Template"
     },
-    "storage": {
+    "data": {
       "type": "parameter",
       "datatype": "choice",
-      "description": "Where the feature stores its data: EF Core (inmemory or database module) or an in-memory store (no data module).",
+      "isRequired": true,
+      "description": "The data module of the solution, as in its .starter.json.",
       "choices": [
-        { "choice": "efcore", "description": "AppDbContext" },
-        { "choice": "memory", "description": "Singleton in-memory store" }
-      ],
-      "defaultValue": "efcore"
+        { "choice": "none", "description": "No data module: a singleton in-memory store" },
+        { "choice": "sqlite", "description": "inmemory module: EF Core with SQLite" },
+        { "choice": "sqlserver", "description": "database module: EF Core with SQL Server" }
+      ]
+    },
+    "UseDatabase": {
+      "type": "computed",
+      "value": "(data == sqlserver)"
+    },
+    "UseInMemory": {
+      "type": "computed",
+      "value": "(data == sqlite)"
     },
     "UseEfCore": {
       "type": "computed",
-      "value": "(storage == efcore)"
+      "value": "(UseDatabase || UseInMemory)"
+    },
+    "IsFeature": {
+      "type": "computed",
+      "description": "Keeps the TODO comments of the shared files, which the project template removes.",
+      "value": "true"
     },
     "routeKebab": {
       "type": "generated",
@@ -55,20 +69,30 @@
       "type": "generated",
       "generator": "casing",
       "description": "The route segment: the plural in kebab case (UserProfiles → user-profiles).",
-      "replaces": "widgets",
+      "replaces": "technologies",
       "parameters": { "source": "routeKebab", "toLower": true }
     }
   },
   "sources": [
     {
+      "source": "../project/",
+      "target": "./",
+      "include": [
+        "src/Starter.Template.Api/Features/Technologies/**",
+        "tests/Starter.Template.Api.IntegrationTests/Features/Technologies/**",
+        "tests/Starter.Template.Api.UnitTests/Features/Technologies/**"
+      ],
       "modifiers": [
         {
           "condition": "(UseEfCore)",
-          "exclude": ["src/Starter.Template.Api/Features/Widgets/WidgetStore.cs"]
+          "exclude": [
+            "src/Starter.Template.Api/Features/Technologies/TechnologyStore.cs",
+            "tests/Starter.Template.Api.UnitTests/Features/Technologies/**"
+          ]
         },
         {
           "condition": "(!UseEfCore)",
-          "exclude": ["src/Starter.Template.Api/Features/Widgets/WidgetConfiguration.cs"]
+          "exclude": ["src/Starter.Template.Api/Features/Technologies/TechnologyConfiguration.cs"]
         }
       ]
     }
@@ -78,7 +102,7 @@
       "description": "How to wire the feature.",
       "manualInstructions": [
         {
-          "text": "Wire the feature: call Map<Plural>Endpoints() in Common/EndpointRegistration.cs and Add<Plural>Services() in Common/ServiceRegistration.cs, then fill in the TODOs."
+          "text": "Wire the feature: call Map<Plural>Endpoints() in Common/EndpointRegistration.cs and Add<Plural>Services() in Common/ServiceRegistration.cs. With SQL Server, create its table in a new Flyway script. Then fill in the TODOs."
         }
       ],
       "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",

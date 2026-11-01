@@ -44,10 +44,20 @@
       "description": "inmemory and database exclude each other: database wins when both are given.",
       "value": "(modules == inmemory && !(modules == database))"
     },
+    "UseEfCore": {
+      "type": "computed",
+      "description": "A data module is selected: the features store their data with EF Core.",
+      "value": "(UseDatabase || UseInMemory)"
+    },
+    "IsFeature": {
+      "type": "computed",
+      "description": "False here, true in the feature template: both share the Technologies files, whose TODO comments only go to generated features.",
+      "value": "false"
+    },
     "launchUrl": {
       "type": "generated",
       "generator": "switch",
-      "description": "Page opened by the debugger (launchSettings.json): Scalar when selected, otherwise Swagger UI, otherwise the technologies endpoint. The template keeps scalar, so the repo opens Scalar.",
+      "description": "Page opened by the debugger (launchSettings.json): Scalar when selected, otherwise Swagger UI, otherwise the about endpoint. The template keeps scalar, so the repo opens Scalar.",
       "replaces": "scalar",
       "onlyIf": [{ "after": "\"launchUrl\": \"" }],
       "parameters": {
@@ -56,7 +66,7 @@
         "cases": [
           { "condition": "(UseScalar)", "value": "scalar" },
           { "condition": "(UseSwaggerUi)", "value": "swagger" },
-          { "condition": "(true)", "value": "api/v1/technologies" }
+          { "condition": "(true)", "value": "api/v1/about" }
         ]
       }
     },
@@ -120,7 +130,6 @@
         {
           "condition": "(!UseDatabase)",
           "exclude": [
-            "compose.yaml",
             "db/**",
             "tests/Starter.Template.Api.IntegrationTests/SqlServerDatabase.cs"
           ]
@@ -130,18 +139,17 @@
           "exclude": ["src/Starter.Template.Api/Common/Data/InMemoryDatabase.cs"]
         },
         {
-          "condition": "(!UseDatabase && !UseInMemory)",
+          "condition": "(!UseEfCore)",
           "exclude": [
             "src/Starter.Template.Api/Common/Data/**",
-            "src/Starter.Template.Api/Features/Technologies/Technology.cs",
             "src/Starter.Template.Api/Features/Technologies/TechnologyConfiguration.cs"
           ]
         },
         {
-          "condition": "(UseDatabase || UseInMemory)",
+          "condition": "(UseEfCore)",
           "exclude": [
             "src/Starter.Template.Api/Features/Technologies/TechnologyStore.cs",
-            "tests/Starter.Template.Api.UnitTests/Features/Technologies/TechnologyStoreTests.cs"
+            "tests/Starter.Template.Api.UnitTests/Features/Technologies/**"
           ]
         }
       ]

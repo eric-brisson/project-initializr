@@ -68,9 +68,9 @@ internal static class Docker
         new[] { DefaultSqlPort }.Concat(Enumerable.Range(14330, 10)).FirstOrDefault(IsPortFree, DefaultSqlPort);
 
     // --wait returns once the container's healthcheck passes, so the database can be created right after.
-    // The first run also downloads the image.
+    // The first run also downloads the image. Only the sqlserver service: compose.yaml also builds and runs the API.
     public static Task<ProcessRunner.Result> StartSqlServerAsync(string projectDir) =>
-        ProcessRunner.RunAsync("docker", ["compose", "up", "--detach", "--wait"], workingDirectory: projectDir);
+        ProcessRunner.RunAsync("docker", ["compose", "up", "--detach", "--wait", "sqlserver"], workingDirectory: projectDir);
 
     // The password reaches sqlcmd through SQLCMDPASSWORD ("-e" without a value copies it from this process),
     // so it isn't in any command line. The name is a validated identifier (letters, digits, _), safe inside [ ] and N' '.

@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Starter.Template.Api.Features.Technologies;
 
 namespace Starter.Template.Api.Common.Data;
 
@@ -7,9 +6,8 @@ namespace Starter.Template.Api.Common.Data;
 // Consider a separate read-only context once reads go to a read replica.
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public DbSet<Technology> Technologies => Set<Technology>();
-
-    // Each feature maps its own entities, in IEntityTypeConfiguration classes next to them.
+    // Each feature maps its own entities, in IEntityTypeConfiguration classes next to them, and reaches them
+    // with Set<TEntity>(): the context doesn't need to know the features.
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 }

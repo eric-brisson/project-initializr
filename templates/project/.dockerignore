@@ -1,0 +1,12 @@
+# Kept out of the build context of the Dockerfile: build outputs, local settings and secrets.
+**/bin/
+**/obj/
+**/TestResults/
+**/*.user
+.git/
+.vs/
+.vscode/
+.idea/
+.env
+tests/
+db/

@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Http.HttpResults;
-#if (UseDatabase || UseInMemory)
+#if (UseEfCore)
 using Microsoft.EntityFrameworkCore;
 using Starter.Template.Api.Common.Data;
 #endif
@@ -8,35 +8,27 @@ namespace Starter.Template.Api.Features.Technologies;
 
 public static class ListTechnologies
 {
-    public sealed record TechnologyDto(string Name, string Version);
-
     public static void MapEndpoint(IEndpointRouteBuilder app)
     {
         app.MapGet("", Handle)
             .WithName(nameof(ListTechnologies));
     }
 
-#if (UseDatabase || UseInMemory)
+#if (UseEfCore)
     // Services registered in the DI container, the DbContext included, are injected as handler parameters.
     // The CancellationToken is bound to the request: it's cancelled if the client disconnects.
-    internal static async Task<Ok<IReadOnlyList<TechnologyDto>>> Handle(
-        IBuiltInTechnologies builtIn,
-        AppDbContext db,
-        CancellationToken cancellationToken)
+    internal static async Task<Ok<List<TechnologyDto>>> Handle(AppDbContext db, CancellationToken cancellationToken)
     {
-        // Projected straight to the DTO: EF Core reads only these columns and doesn't track anything.
-        var added = await db.Technologies
-            .OrderBy(technology => technology.Id)
-            .Select(technology => new TechnologyDto(technology.Name, technology.Version))
+        var items = await db.Set<Technology>()
+            .OrderBy(item => item.Id)
+            .Select(TechnologyDto.Projection)
             .ToListAsync(cancellationToken);
 
-        return TypedResults.Ok<IReadOnlyList<TechnologyDto>>([.. builtIn.All, .. added]);
+        return TypedResults.Ok(items);
     }
 #else
     // Services registered in the DI container are injected as handler parameters.
-    internal static Ok<IReadOnlyList<TechnologyDto>> Handle(IBuiltInTechnologies builtIn, TechnologyStore store)
-    {
-        return TypedResults.Ok<IReadOnlyList<TechnologyDto>>([.. builtIn.All, .. store.GetAll()]);
-    }
+    internal static Ok<List<TechnologyDto>> Handle(TechnologyStore store) =>
+        TypedResults.Ok(store.GetAll().Select(TechnologyDto.From).ToList());
 #endif
 }

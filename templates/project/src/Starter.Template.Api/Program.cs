@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
 #endif
 using Starter.Template.Api.Common;
-#if (UseDatabase || UseInMemory)
+#if (UseEfCore)
 using Starter.Template.Api.Common.Data;
 #endif
 
@@ -25,7 +25,8 @@ public class Program
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
 
-        // Error responses (validation failures included) use the RFC 9457 problem details format.
+        // Error responses use the RFC 9457 problem details format: validation failures, error status codes
+        // returned without a body (404...) and exceptions (see UseExceptionHandler below).
         builder.Services.AddProblemDetails();
 
         // Validates minimal API parameters annotated with data annotations ([Required], [StringLength], ...).
@@ -35,12 +36,20 @@ public class Program
         builder.Services.AddHealthChecks();
 
         builder.Services.AddFeatures();
-#if (UseDatabase || UseInMemory)
+#if (UseEfCore)
 
         builder.AddDatabase();
 #endif
 
         var app = builder.Build();
+
+        // First in the pipeline, so it catches the exceptions of everything after it. The handlers registered with
+        // AddExceptionHandler get the first try; otherwise the response is a 500 problem details, without the
+        // exception (it's in the logs). In Development too, so the responses are the same as in Production.
+        app.UseExceptionHandler();
+
+        // Gives a problem details body to the error status codes returned without one (404, 405...).
+        app.UseStatusCodePages();
 #if (UseInMemory)
 
         app.CreateDatabase();

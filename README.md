@@ -17,11 +17,20 @@ dotnet new install ./templates
 
 ## The project template
 
-A minimal API organized in vertical slices, with unit and integration tests (xUnit v3).
+A minimal API organized in vertical slices, with unit and integration tests (xUnit v3). It holds two
+features: `About` (`GET /api/v1/about`, the API's version and the components it's built with) and
+`Technologies`, a CRUD example that is also the source of the feature template (see below).
 
 - `Starter.Template` is replaced everywhere by the name you choose (files, folders,
   namespaces, project references).
 - Central package management (`Directory.Packages.props`).
+- Shared build settings (`Directory.Build.props`): the target framework, nullable, the .NET analyzers at
+  their recommended level and the `.editorconfig` style rules checked by the build. Warnings fail the build.
+- Errors in the RFC 9457 problem details format: validation failures, error status codes returned without a
+  body (404...) and exceptions (`UseExceptionHandler`). With a data module, a unique index violation
+  gets a 409 Conflict (`UniqueConstraintExceptionHandler`) instead of a 500.
+- A `Dockerfile` for the API and a `compose.yaml` that builds and runs it: `docker compose up --build`.
+- A `README.md` for the generated solution, written for the selected modules.
 - Health checks for Kubernetes probes: `/actuator/health/liveness` (no checks: the process
   answers) and `/actuator/health/readiness` (checks tagged `ready`, the database included with
   `inmemory` or `database`).
@@ -31,19 +40,20 @@ A minimal API organized in vertical slices, with unit and integration tests (xUn
   `inmemory`, `database`. `inmemory` and `database` both store the technologies added through
   the API with EF Core, and exclude each other (`database` wins when both are given):
   - `inmemory` uses an in-memory SQLite database, created from the EF Core model at startup
-    and emptied on every restart. No Docker needed.
+    and emptied on every restart. No Docker needed. Names compare case-insensitively (`NOCASE`),
+    as with SQL Server.
   - `database` uses SQL Server, with the schema in Flyway scripts (`db/migrations`). The
     integration tests run against a throwaway SQL Server started with Testcontainers, migrated
     by the same Flyway image. Without Docker they are skipped, unless `CI` is set (as on
     GitHub Actions), where they fail.
 
-  The `database` module adds a `compose.yaml` running SQL Server (and a `flyway` service) and a
+  The `database` module adds SQL Server (and a `flyway` service) to `compose.yaml`, and a
   password-less connection string in
   `appsettings.Development.json`. The database is named with `--databaseName`, by default
   the solution name without dots (`Sample.Orders` → `SampleOrders`). The CLI fills in the password (see below); with plain
   `dotnet new`, set `ConnectionStrings:Default` with `dotnet user-secrets` and
-  `MSSQL_SA_PASSWORD` in a `.env` yourself, create the database, then run
-  `docker compose run --rm flyway`.
+  `MSSQL_SA_PASSWORD` in a `.env` yourself, start SQL Server with `docker compose up -d sqlserver`,
+  create the database, then run `docker compose run --rm flyway`.
   The demo enables `scalar`, `swaggerui` and `database` (see `Directory.Build.props`), so the
   repo always builds and tests them; check `inmemory` by generating a project.
 
@@ -60,10 +70,17 @@ dotnet new project-initializr -n Sample.Orders -o ./Sample.Orders --modules ""
 
 Adds a CRUD feature to a generated solution: `Features/<Plural>` with the five slices (list,
 get, create, update, delete), the entity, its DTO, the endpoint and service registrations,
-and one integration test file per endpoint. The entity starts with `Id` and `Name`, and
-`// TODO` comments mark where your own properties go. With a data module (`--storage efcore`),
-the handlers use `AppDbContext` and an `IEntityTypeConfiguration` maps the entity; without one
-(`--storage memory`), they use a singleton in-memory store.
+and one integration test file per endpoint. The entity starts with `Id` and a unique `Name`, and
+`// TODO` comments mark where your own properties go. The DTO maps the entity in one place, a
+`Projection` expression that EF Core translates to SQL. With a data module (`--data sqlite` or
+`--data sqlserver`), the handlers use `AppDbContext` and an `IEntityTypeConfiguration` maps the
+entity; without one (`--data none`), they use a singleton in-memory store, with its unit tests.
+
+The template has no files of its own: it reads the `Technologies` feature of the project template
+(`templates/feature/.template.config/template.json`, `sources`), and renames `Technology`,
+`Technologies` and the `technologies` route. A change to that feature reaches both templates, and
+the repo's tests cover it. Keep its comments free of the lowercase words, which would be renamed too,
+and wrap a comment meant only for generated features in `//#if (IsFeature)`.
 
 It only adds files. Wire the feature yourself: `Map<Plural>Endpoints()` in
 `Common/EndpointRegistration.cs` and `Add<Plural>Services()` in `Common/ServiceRegistration.cs`.
@@ -72,7 +89,7 @@ fail until then.
 
 ```bash
 cd Sample.Orders
-dotnet new starter-feature -n Account --plural Accounts --solution Sample.Orders --storage efcore
+dotnet new starter-feature -n Account --plural Accounts --solution Sample.Orders --data sqlserver
 ```
 
 ## The CLI
