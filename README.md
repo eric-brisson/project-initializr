@@ -37,7 +37,7 @@ features: `About` (`GET /api/v1/about`, the API's version and the components it'
 - A `UserSecretsId` on the API (a new one per project), so `dotnet user-secrets` works right
   away. In Development, user secrets override the `appsettings` files.
 - Optional modules through the `modules` parameter: `scalar`, `swaggerui` (both by default),
-  `inmemory`, `database`. `inmemory` and `database` both store the technologies added through
+  `inmemory`, `database`, `telemetry`. `inmemory` and `database` both store the technologies added through
   the API with EF Core, and exclude each other (`database` wins when both are given):
   - `inmemory` uses an in-memory SQLite database, created from the EF Core model at startup
     and emptied on every restart. No Docker needed. Names compare case-insensitively (`NOCASE`),
@@ -54,8 +54,18 @@ features: `About` (`GET /api/v1/about`, the API's version and the components it'
   `dotnet new`, set `ConnectionStrings:Default` with `dotnet user-secrets` and
   `MSSQL_SA_PASSWORD` in a `.env` yourself, start SQL Server with `docker compose up -d sqlserver`,
   create the database, then run `docker compose run --rm flyway`.
-  The demo enables `scalar`, `swaggerui` and `database` (see `Directory.Build.props`), so the
+  The demo enables `scalar`, `swaggerui`, `database` and `telemetry` (see `Directory.Build.props`), so the
   repo always builds and tests them; check `inmemory` by generating a project.
+
+- The `telemetry` module sends the API's traces, metrics and logs to a local Aspire dashboard
+  (`docker compose up -d dashboard`, then <http://localhost:18888>), with stable OpenTelemetry packages:
+  ASP.NET Core, HttpClient, runtime and, with `database`, SqlClient (EF Core's queries included).
+  The SDK is registered only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, which the launch profiles
+  and `compose.yaml` do. Deployed, it isn't set, so nothing doubles what Dynatrace OneAgent records.
+  `CreateTechnology` shows a custom span and metric; generated features don't get them.
+  `launchSettings.json` can't hold the template's comment markers (`dotnet run` rejects comments
+  there), so it comes in two copies: `launchSettings.json` with the variable, and
+  `launchSettings.notelemetry.json` without it, renamed when the module isn't selected. Keep them in sync.
 
 - A `.starter.json` at the root records the solution name and the data module, for the
   feature template (see below).

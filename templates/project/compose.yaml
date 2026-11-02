@@ -3,6 +3,9 @@
 # For development (dotnet run), start only SQL Server: docker compose up -d sqlserver
 # The sa password comes from .env (not committed), written by starter-init along with the API's user secrets.
 #endif
+#if (UseTelemetry)
+# For local telemetry with dotnet run, start the dashboard: docker compose up -d dashboard
+#endif
 # The project name fixes the container, image and volume names, whatever the folder is called.
 name: starter-template
 services:
@@ -14,11 +17,19 @@ services:
     # Set API_PORT in .env if another app already uses 8080.
     ports:
       - "${API_PORT:-8080}:8080"
-#if (UseDatabase)
+#if (UseDatabase || UseTelemetry)
     environment:
+#endif
+#if (UseDatabase)
       # The database must exist and be migrated (starter-init does both). The password is quoted so a ; in it
       # doesn't end the value, which means it can't contain a double quote.
       ConnectionStrings__Default: 'Server=sqlserver,1433;Database=StarterTemplate;User Id=sa;Password="${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}";TrustServerCertificate=True'
+#endif
+#if (UseTelemetry)
+      # Sends the traces, metrics and logs to the dashboard below.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://dashboard:18889
+#endif
+#if (UseDatabase)
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -58,6 +69,21 @@ services:
     depends_on:
       sqlserver:
         condition: service_healthy
+#endif
+#if (UseTelemetry)
+
+  # The Aspire dashboard: traces, metrics and logs of the API on http://localhost:18888
+  # It receives them over OTLP on port 4317, and keeps them in memory only: they're gone when it stops.
+  # Local use only, so without login. Deployed in ARO, the API is instrumented by Dynatrace OneAgent instead.
+  dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.6
+    environment:
+      DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+    ports:
+      - "18888:18888"
+      - "4317:18889"
+#endif
+#if (UseDatabase)
 
 volumes:
   sqlserver-data:

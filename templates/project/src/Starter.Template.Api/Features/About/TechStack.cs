@@ -18,6 +18,9 @@ internal static class TechStack
 #if (UseSwaggerUi)
             new("Swagger UI", VersionOf(typeof(Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIOptions))),
 #endif
+#if (UseTelemetry)
+            new("OpenTelemetry", VersionOf(typeof(OpenTelemetry.Sdk))),
+#endif
 #if (UseEfCore)
             new("Entity Framework Core", VersionOf(typeof(Microsoft.EntityFrameworkCore.DbContext))),
 #endif

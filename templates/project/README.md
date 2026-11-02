@@ -7,6 +7,8 @@ A .NET 10 minimal API organized in vertical slices, generated with project-initi
 - The .NET 10 SDK.
 <!--#if (UseDatabase) -->
 - Docker, for SQL Server and the integration tests.
+<!--#elseif (UseTelemetry) -->
+- Docker, for the telemetry dashboard and to run the API in a container.
 <!--#else -->
 - Docker, only to run the API in a container.
 <!--#endif -->
@@ -75,6 +77,26 @@ dotnet user-secrets list --project src/Starter.Template.Api
 ```
 
 <!--#endif -->
+<!--#if (UseTelemetry) -->
+## Local telemetry
+
+The Aspire dashboard shows the traces, metrics and logs of the API while you develop: each request as a
+waterfall of its spans (HTTP calls, SQL queries, custom spans), with the logs written during it.
+
+```bash
+docker compose up -d dashboard
+dotnet run --project src/Starter.Template.Api
+```
+
+Then open <http://localhost:18888>. The launch profiles set `OTEL_EXPORTER_OTLP_ENDPOINT` to the dashboard,
+which turns on the OpenTelemetry SDK (`Common/Telemetry/TelemetryRegistration.cs`). Without that variable,
+as when deployed, nothing is registered: in ARO, Dynatrace OneAgent instruments the API by itself.
+The dashboard keeps the data in memory only.
+
+Custom spans and metrics use `AppTelemetry` (plain `System.Diagnostics`). `CreateTechnology` has one of each,
+and `TelemetryTests` shows how to test a span without the SDK.
+
+<!--#endif -->
 <!--#if (UseInMemory) -->
 ## Database
 
@@ -99,6 +121,9 @@ src/Starter.Template.Api/
   Common/                   What the features share: endpoint and service registration
 <!--#if (UseEfCore) -->
   Common/Data/              AppDbContext and the database setup
+<!--#endif -->
+<!--#if (UseTelemetry) -->
+  Common/Telemetry/         OpenTelemetry setup, and the source and meter of the custom telemetry
 <!--#endif -->
   Features/<Feature>/       One folder per feature, one file per endpoint (a vertical slice)
 tests/

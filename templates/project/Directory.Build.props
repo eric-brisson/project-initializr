@@ -23,7 +23,7 @@
        inmemory and database exclude each other: the demo uses database.
        The template engine removes this block from generated projects. -->
   <PropertyGroup>
-    <DefineConstants>$(DefineConstants);UseScalar;UseSwaggerUi;UseDatabase;UseEfCore</DefineConstants>
+    <DefineConstants>$(DefineConstants);UseScalar;UseSwaggerUi;UseDatabase;UseEfCore;UseTelemetry</DefineConstants>
   </PropertyGroup>
   <!--#endif -->
 

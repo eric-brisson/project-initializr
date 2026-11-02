@@ -23,7 +23,8 @@
         { "choice": "scalar", "description": "Scalar API reference (/scalar)" },
         { "choice": "swaggerui", "description": "Swagger UI (/swagger)" },
         { "choice": "inmemory", "description": "EF Core with an in-memory SQLite database (no Docker)" },
-        { "choice": "database", "description": "EF Core with SQL Server in docker compose, Flyway migrations" }
+        { "choice": "database", "description": "EF Core with SQL Server in docker compose, Flyway migrations" },
+        { "choice": "telemetry", "description": "OpenTelemetry traces, metrics and logs in a local Aspire dashboard (docker compose)" }
       ],
       "defaultValue": "scalar|swaggerui"
     },
@@ -43,6 +44,10 @@
       "type": "computed",
       "description": "inmemory and database exclude each other: database wins when both are given.",
       "value": "(modules == inmemory && !(modules == database))"
+    },
+    "UseTelemetry": {
+      "type": "computed",
+      "value": "(modules == telemetry)"
     },
     "UseEfCore": {
       "type": "computed",
@@ -133,6 +138,21 @@
             "db/**",
             "tests/Starter.Template.Api.IntegrationTests/SqlServerDatabase.cs"
           ]
+        },
+        {
+          "condition": "(!UseTelemetry)",
+          "exclude": [
+            "src/Starter.Template.Api/Common/Telemetry/**",
+            "tests/Starter.Template.Api.IntegrationTests/TelemetryTests.cs",
+            "src/Starter.Template.Api/Properties/launchSettings.json"
+          ],
+          "rename": {
+            "src/Starter.Template.Api/Properties/launchSettings.notelemetry.json": "src/Starter.Template.Api/Properties/launchSettings.json"
+          }
+        },
+        {
+          "condition": "(UseTelemetry)",
+          "exclude": ["src/Starter.Template.Api/Properties/launchSettings.notelemetry.json"]
         },
         {
           "condition": "(!UseInMemory)",

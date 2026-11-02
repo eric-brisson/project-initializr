@@ -52,6 +52,11 @@
       "type": "computed",
       "value": "(UseDatabase || UseInMemory)"
     },
+    "UseTelemetry": {
+      "type": "computed",
+      "description": "The custom span and metric of the Technologies feature are an example: generated features don't get them.",
+      "value": "false"
+    },
     "IsFeature": {
       "type": "computed",
       "description": "Keeps the TODO comments of the shared files, which the project template removes.",

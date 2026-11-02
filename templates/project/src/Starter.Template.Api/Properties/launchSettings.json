@@ -8,6 +8,7 @@
       "launchUrl": "scalar",
       "applicationUrl": "http://localhost:5154",
       "environmentVariables": {
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
@@ -18,6 +19,7 @@
       "launchUrl": "scalar",
       "applicationUrl": "https://localhost:7021;http://localhost:5154",
       "environmentVariables": {
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }

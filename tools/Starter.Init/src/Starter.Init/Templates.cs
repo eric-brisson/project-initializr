@@ -35,6 +35,9 @@ internal static class Templates
             // No NextStep: Program shows the connection details instead.
             new("Données", DatabaseId, "SQL Server", "conteneur Docker avec la base du projet, migrations Flyway", false,
                 Exclusive: true),
+            new("Observabilité", "telemetry", "Télémétrie locale",
+                "traces, logs et métriques dans le tableau de bord Aspire (Docker), pendant le développement", false,
+                "Suivez les requêtes avec [#61AFEF]docker compose up -d dashboard[/], puis [#61AFEF]http://localhost:18888[/]"),
         ]),
     ];
 }

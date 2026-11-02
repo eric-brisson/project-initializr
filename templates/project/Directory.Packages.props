@@ -24,6 +24,19 @@
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.12" />
     <!--#endif -->
   </ItemGroup>
+  <!--#if (UseTelemetry) -->
+  <ItemGroup Label="Telemetry">
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1" />
+    <!--#if (UseDatabase) -->
+    <!-- Stable, unlike the EF Core instrumentation (still in beta), and it sees the queries of EF Core too. -->
+    <PackageVersion Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.20.1" />
+    <!--#endif -->
+  </ItemGroup>
+  <!--#endif -->
   <!--#if (UseDatabase) -->
   <ItemGroup Label="Security">
     <!-- Microsoft.Data.SqlClient 6.1 depends on 9.0.11, which has known vulnerabilities (fixed in 10.0.13). -->

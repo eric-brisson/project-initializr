@@ -6,6 +6,9 @@ using Starter.Template.Api.Common;
 #if (UseEfCore)
 using Starter.Template.Api.Common.Data;
 #endif
+#if (UseTelemetry)
+using Starter.Template.Api.Common.Telemetry;
+#endif
 
 namespace Starter.Template.Api;
 
@@ -36,6 +39,11 @@ public class Program
         builder.Services.AddHealthChecks();
 
         builder.Services.AddFeatures();
+#if (UseTelemetry)
+
+        // Traces, metrics and logs for the local Aspire dashboard, only when its address is set (launchSettings.json).
+        builder.AddTelemetry();
+#endif
 #if (UseEfCore)
 
         builder.AddDatabase();
