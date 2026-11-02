@@ -1,6 +1,3 @@
-using Spectre.Console;
-using Spectre.Console.Rendering;
-
 namespace Starter.Init;
 
 // Astro-style layout: a column of colored badges on the left, everything else aligned after it.

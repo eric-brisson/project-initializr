@@ -1,8 +1,3 @@
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using Spectre.Console;
-using Starter.Init.Prompts;
-
 namespace Starter.Init;
 
 // starter-init feature: adds a CRUD feature (the starter-feature item template) to a generated solution.
@@ -17,17 +12,14 @@ internal static partial class Program
     // Inside a generated solution, adding a feature is the likelier choice: it comes first.
     private static bool AskAddFeature(StarterProject? project)
     {
-        (string Label, bool Feature) create = ("Créer un projet", false);
-        (string Label, bool Feature) feature = ("Ajouter une feature", true);
-
-        return new SelectPrompt<(string Label, bool Feature)>(
-                project is null ? [create, feature] : [feature, create],
-                choice => choice.Label,
-                choice => choice.Feature
-                    ? project is null ? "à une solution existante" : $"à {project.Solution}"
-                    : "nouvelle solution")
-            .Ask("action", "Que voulez-vous faire ?")
-            .Feature;
+        return Ask.Choice<bool>(
+            "action",
+            "Que voulez-vous faire ?",
+            project is null ? [false, true] : [true, false],
+            feature => feature ? "Ajouter une feature" : "Créer un projet",
+            feature => feature
+                ? project is null ? "à une solution existante" : $"à {project.Solution}"
+                : "nouvelle solution");
     }
 
     // name is null in interactive mode.
@@ -69,7 +61,7 @@ internal static partial class Program
             return 1;
         }
 
-        if (interactive && !AskYesNo("créer", "Tout est prêt. Générer la feature ?", details: FeatureSummary(project, name, plural)))
+        if (interactive && !Ask.YesNo("créer", "Tout est prêt. Générer la feature ?", details: FeatureSummary(project, name, plural)))
         {
             return 0;
         }
@@ -101,24 +93,23 @@ internal static partial class Program
     private const string FeatureNameRule = "Un nom en PascalCase, au singulier, par exemple Account ou UserProfile";
 
     private static string AskFeatureName() =>
-        new InputPrompt(
-                "Account",
-                validate: name => ValidFeatureName().IsMatch(name) ? null : FeatureNameRule,
-                hint: name => ValidFeatureName().IsMatch(name)
-                    ? $"Les classes seront {name}, Create{name}, Get{name}…"
-                    : FeatureNameRule)
-            .Ask("feature", "Quel nom pour la feature (au singulier) ?");
+        Ask.Text(
+            "feature",
+            "Quel nom pour la feature (au singulier) ?",
+            "Account",
+            validate: name => ValidFeatureName().IsMatch(name) ? null : FeatureNameRule,
+            help: FeatureNameRule,
+            answer: name => $"Les classes seront {name}, Create{name}, Get{name}…");
 
     private static string AskPlural(string name) =>
-        new InputPrompt(
-                Pluralize(name),
-                validate: plural => !ValidFeatureName().IsMatch(plural) ? "Un nom en PascalCase, par exemple Accounts"
-                    : plural == name ? "Le pluriel doit être différent du nom"
-                    : null,
-                hint: plural => ValidFeatureName().IsMatch(plural)
-                    ? $"Dossier Features/{plural}, route /api/v1/{Kebab(plural)}"
-                    : "Un nom en PascalCase, par exemple Accounts")
-            .Ask("pluriel", "Quel pluriel ?");
+        Ask.Text(
+            "pluriel",
+            "Quel pluriel ?",
+            Pluralize(name),
+            validate: plural => !ValidFeatureName().IsMatch(plural) ? "Un nom en PascalCase, par exemple Accounts"
+                : plural == name ? "Le pluriel doit être différent du nom"
+                : null,
+            answer: plural => $"Dossier Features/{plural}, route /api/v1/{Kebab(plural)}");
 
     private static Spectre.Console.Rendering.IRenderable FeatureSummary(StarterProject project, string name, string plural) =>
         Ui.Details(new[]

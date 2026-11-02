@@ -1,11 +1,3 @@
-using System.Reflection;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using Spectre.Console;
-using Spectre.Console.Rendering;
-using Starter.Init.Prompts;
-
 namespace Starter.Init;
 
 internal static partial class Program
@@ -26,7 +18,9 @@ internal static partial class Program
         // Arguments skip every prompt (for scripts): starter-init <name> [folder], or starter-init feature <Name>.
         // For a project, the first template and its default modules are used.
         var interactive = args.Length == (featureCommand ? 1 : 0);
-        if (interactive && !Keyboard.IsAvailable)
+        // The questions need a real keyboard and a real screen: not there when the input or the output is redirected
+        // (scripts, pipelines, the "Run" window of some IDEs).
+        if (interactive && (Console.IsInputRedirected || Console.IsOutputRedirected))
         {
             Ui.Fail("Ce terminal ne permet pas les questions interactives.");
             Ui.Line("[grey]Lancez l'outil dans un vrai terminal (Windows Terminal, PowerShell), pas dans la fenêtre « Run » d'un IDE,[/]");
@@ -53,8 +47,7 @@ internal static partial class Program
 
         // The template comes first: the other questions depend on the project type.
         var template = interactive
-            ? new SelectPrompt<Templates.Choice>(Templates.All, choice => choice.Name, choice => choice.Description)
-                .Ask("modèle", "Quel modèle voulez-vous utiliser ?")
+            ? Ask.Choice("modèle", "Quel modèle voulez-vous utiliser ?", Templates.All, choice => choice.Name, choice => choice.Description)
             : Templates.All[0];
 
         var outputDir = interactive ? AskOutputDir() : null;
@@ -62,7 +55,7 @@ internal static partial class Program
 
         if (!ValidName().IsMatch(name))
         {
-            Ui.Fail($"'{name}' n'est pas un espace de noms C# valide, par exemple Sample.Orders");
+            Ui.Fail($"'{name}' n'est pas un namespace C# valide, par exemple Sample.Orders");
             return 1;
         }
 
@@ -102,7 +95,7 @@ internal static partial class Program
         }
 
         if (interactive && !IsEmptyFolder(outputDir!)
-            && !AskYesNo("dossier", $"Le dossier [#61AFEF]{Markup.Escape(outputDir!)}[/] n'est pas vide. Continuer quand même ?", yesFirst: false))
+            && !Ask.YesNo("dossier", $"Le dossier [#61AFEF]{Markup.Escape(outputDir!)}[/] n'est pas vide. Continuer quand même ?", yesFirst: false))
         {
             return 0;
         }
@@ -110,11 +103,11 @@ internal static partial class Program
         // dotnet new refuses to overwrite files, and a freshly cloned repo often has its own .gitignore.
         var gitignore = Path.Combine(outputDir!, ".gitignore");
         var keepGitignore = File.Exists(gitignore)
-            && (!interactive || !AskYesNo("git", "Un .gitignore existe déjà. Le remplacer par celui du modèle ?", yesFirst: false));
+            && (!interactive || !Ask.YesNo("git", "Un .gitignore existe déjà. Le remplacer par celui du modèle ?", yesFirst: false));
         var replaceGitignore = File.Exists(gitignore) && !keepGitignore;
 
         var initGit = interactive && await Git.CanInitAsync(outputDir!)
-            && AskYesNo("git", "Initialiser un dépôt Git dans le dossier ?");
+            && Ask.YesNo("git", "Initialiser un dépôt Git dans le dossier ?");
 
         // The first commit is the generated project as it was, to compare against or go back to.
         var commit = initGit && await Git.HasIdentityAsync();
@@ -126,7 +119,7 @@ internal static partial class Program
         }
 
         var summary = Summary(template, outputDir!, name, modules, database, dashboard, initGit, commit, keepGitignore, replaceGitignore);
-        if (interactive && !AskYesNo("créer", "Tout est prêt. Générer le projet ?", details: summary))
+        if (interactive && !Ask.YesNo("créer", "Tout est prêt. Générer le projet ?", details: summary))
         {
             return 0;
         }
@@ -278,13 +271,17 @@ internal static partial class Program
 
         while (true)
         {
-            var choice = new SelectPrompt<string>(choices, choice => choice, choice => choice switch
+            var choice = Ask.Choice(
+                "docker",
+                $"[{Ui.Warning.ToMarkup()}]Docker n'est pas disponible.[/] Que voulez-vous faire ?",
+                choices,
+                choice => choice,
+                choice => choice switch
                 {
                     Start => details,
                     Retry => "une fois Docker lancé",
                     _ => "le projet sera configuré, sans démarrer SQL Server",
-                })
-                .Ask("docker", $"[{Ui.Warning.ToMarkup()}]Docker n'est pas disponible.[/] Que voulez-vous faire ?");
+                });
 
             if (choice == Skip)
             {
@@ -421,35 +418,33 @@ internal static partial class Program
             if (category.OneChoice)
             {
                 // None first: a project without the module stays the default.
-                Templates.Module?[] choices = [null, .. modules];
-                var choice = new SelectPrompt<Templates.Module?>(
-                        choices,
-                        module => module?.Name ?? category.None ?? "Aucun",
-                        module => module is null ? category.NoneDescription : module.Description)
-                    .Ask(category.Badge, category.Question);
+                var choice = Ask.Choice<Templates.Module?>(
+                    category.Badge,
+                    category.Question,
+                    [null, .. modules],
+                    module => module?.Name ?? category.None ?? "Aucun",
+                    module => module is null ? category.NoneDescription : module.Description);
                 selected.AddRange(choice is null ? [] : [choice]);
             }
             else if (modules is [var module])
             {
-                (string Label, bool Value)[] answers = module.SelectedByDefault
-                    ? [("Oui", true), ("Non", false)]
-                    : [("Non", false), ("Oui", true)];
-                var add = new SelectPrompt<(string Label, bool Value)>(
-                        answers,
-                        answer => answer.Label,
-                        answer => answer.Value ? module.Description : null)
-                    .Ask(category.Badge, category.Question)
-                    .Value;
+                var add = Ask.Choice<bool>(
+                    category.Badge,
+                    category.Question,
+                    module.SelectedByDefault ? [true, false] : [false, true],
+                    yes => yes ? "Oui" : "Non",
+                    yes => yes ? module.Description : null);
                 selected.AddRange(add ? [module] : []);
             }
             else
             {
-                selected.AddRange(new MultiSelectPrompt<Templates.Module>(
-                        modules,
-                        module => module.Name,
-                        module => module.Description,
-                        module => module.SelectedByDefault)
-                    .Ask(category.Badge, category.Question));
+                selected.AddRange(Ask.Choices(
+                    category.Badge,
+                    category.Question,
+                    modules,
+                    module => module.Name,
+                    module => module.Description,
+                    module => module.SelectedByDefault));
             }
         }
 
@@ -461,36 +456,36 @@ internal static partial class Program
         var current = Directory.GetCurrentDirectory();
         var suggestion = IsEmptyFolder(current) ? "." : Path.Combine(".", "Sample.Orders");
 
-        var folder = new InputPrompt(
-                suggestion,
-                validate: path => ToFullPath(path) is null ? "Chemin invalide" : null,
-                hint: path => ToFullPath(path),
-                summary: path => ToFullPath(path)!)
-            .Ask("dossier", "Où voulez-vous créer le projet ?");
+        var folder = Ask.Text(
+            "dossier",
+            "Où voulez-vous créer le projet ?",
+            suggestion,
+            validate: path => ToFullPath(path) is null ? "Chemin invalide" : null,
+            answer: path => ToFullPath(path)!);
 
         return ToFullPath(folder)!;
     }
 
-    private const string NameRule = "Utilisez un espace de noms C# valide, par exemple Sample.Orders";
+    private const string NameRule = "Utilisez un namespace C# valide, par exemple Sample.Orders";
 
-    // The hint ignores a trailing dot, so it doesn't vanish each time the user starts a new segment.
     private static string AskName(string outputDir) =>
-        new InputPrompt(
-                NameFromFolder(outputDir),
-                validate: name => ValidName().IsMatch(name) ? null : NameRule,
-                hint: name => ValidName().IsMatch(name.TrimEnd('.'))
-                    ? $"Le projet API sera {Path.Combine("src", $"{name.TrimEnd('.')}.Api")}"
-                    : NameRule)
-            .Ask("nom", "Quel nom pour la solution ?");
+        Ask.Text(
+            "nom",
+            "Quel nom pour la solution ?",
+            NameFromFolder(outputDir),
+            validate: name => ValidName().IsMatch(name) ? null : NameRule,
+            help: NameRule,
+            answer: name => $"Le projet API sera {Path.Combine("src", $"{name}.Api")}");
 
     // A plain identifier (no dot), so T-SQL and Flyway never need [brackets] around it.
     // The suggestion is the solution name without its dots: Sample.Orders → SampleOrders.
     private static string AskDatabaseName(string solutionName) =>
-        new InputPrompt(
-                solutionName.Replace(".", string.Empty),
-                validate: name => ValidDatabaseName().IsMatch(name) ? null : DatabaseNameRule,
-                hint: name => ValidDatabaseName().IsMatch(name) ? "Utilisé dans la chaîne de connexion et par les scripts SQL" : DatabaseNameRule)
-            .Ask("base", "Quel nom pour la base de données ?");
+        Ask.Text(
+            "base",
+            "Quel nom pour la base de données ?",
+            solutionName.Replace(".", string.Empty),
+            validate: name => ValidDatabaseName().IsMatch(name) ? null : DatabaseNameRule,
+            help: $"{DatabaseNameRule}. Utilisé dans la chaîne de connexion et par les scripts SQL.");
 
     private const string DatabaseNameRule = "Une lettre, puis lettres, chiffres ou _ (128 au plus), par exemple SampleOrders";
 
@@ -501,13 +496,15 @@ internal static partial class Program
 
     // SQL Server refuses to start with a weak sa password, so check its policy here rather than in the container logs.
     private static string AskSaPassword() =>
-        new InputPrompt(
-                string.Empty,
-                validate: SaPasswordError,
-                hint: password => SaPasswordError(password) ?? "Enregistré dans les secrets utilisateur de l'API et dans .env (non versionné)",
-                summary: password => new string('•', password.Length),
-                secret: true)
-            .Ask("sql", "Quel mot de passe pour le compte sa de SQL Server ?");
+        Ask.Text(
+            "sql",
+            "Quel mot de passe pour le compte sa de SQL Server ?",
+            string.Empty,
+            validate: SaPasswordError,
+            help: $"{SaPasswordRule}. Enregistré dans les secrets utilisateur de l'API et dans .env (non versionné).",
+            secret: true);
+
+    private const string SaPasswordRule = "Au moins 8 caractères, avec 3 types parmi majuscules, minuscules, chiffres et symboles";
 
     // At least 8 characters from 3 of the 4 groups: uppercase, lowercase, digits, symbols.
     // No single quote: .env wraps the value in single quotes so docker compose reads it literally.
@@ -522,17 +519,9 @@ internal static partial class Program
         }.Count(present => present);
 
         return password.Length < 8 || groups < 3
-            ? "Au moins 8 caractères, avec 3 types parmi majuscules, minuscules, chiffres et symboles"
+            ? SaPasswordRule
             : password.Contains('\'') ? "Les apostrophes (') ne sont pas acceptées"
             : null;
-    }
-
-    private static bool AskYesNo(string badge, string question, bool yesFirst = true, IRenderable? details = null)
-    {
-        (string Label, bool Value)[] choices = yesFirst ? [("Oui", true), ("Non", false)] : [("Non", false), ("Oui", true)];
-        return new SelectPrompt<(string Label, bool Value)>(choices, choice => choice.Label)
-            .Ask(badge, question, details)
-            .Value;
     }
 
     // Every choice in one place before generating, including what the tool decided itself (port, Docker, commit).

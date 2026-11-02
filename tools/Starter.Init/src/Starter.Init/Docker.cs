@@ -1,6 +1,3 @@
-using System.Net;
-using System.Net.Sockets;
-
 namespace Starter.Init;
 
 // The SQL Server container of the database module (compose.yaml in the generated project).

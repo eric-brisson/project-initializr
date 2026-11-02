@@ -1,6 +1,3 @@
-using Spectre.Console;
-using Spectre.Console.Rendering;
-
 namespace Starter.Init;
 
 // Columns of the step list: status icon, colored label and duration.

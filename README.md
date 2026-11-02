@@ -111,7 +111,10 @@ dotnet new starter-feature -n Account --plural Accounts --solution Sample.Orders
 
 Asks for the template, the folder, the solution name, the modules and whether to run
 `git init` (unless the folder is already in a repo), then generates,
-restores, builds and tests the project. The prompts and messages are in French.
+restores, builds and tests the project. The prompts and messages are in French. The questions live in
+`Ask.cs`: each one is drawn under its badge, aligned with it, and only the answer stays once it's given. The
+lists (● one choice, ◼ several) are drawn there, since Spectre.Console's selection prompts can't be indented
+and use a `>` marker; free text uses Spectre's `TextPrompt`.
 
 The modules are asked step by step, one question per category, in the order they are declared in
 `Templates.cs`: the API documentation (several boxes to check), the data storage (one choice, with

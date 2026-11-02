@@ -1,6 +1,3 @@
-using System.ComponentModel;
-using System.Diagnostics;
-
 namespace Starter.Init;
 
 internal static class ProcessRunner
