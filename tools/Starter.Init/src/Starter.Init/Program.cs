@@ -131,7 +131,9 @@ internal static partial class Program
             [
                 "new", template.ShortName, "--name", name, "--output", outputDir!,
                 .. ModuleArguments(template, modules),
-                .. (database is not null ? ["--databaseName", database.Name] : Array.Empty<string>()),
+                .. (database is not null
+                    ? ["--databaseName", database.Name, "--sqlPort", $"{database.Port}"]
+                    : Array.Empty<string>()),
                 .. (replaceGitignore ? ["--force"] : Array.Empty<string>()),
             ])),
             .. (initGit

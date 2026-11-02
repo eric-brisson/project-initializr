@@ -81,6 +81,14 @@
       "description": "SQL Server database name (database module). Defaults to the solution name without dots (Sample.Orders → SampleOrders).",
       "defaultValue": ""
     },
+    "sqlPort": {
+      "type": "parameter",
+      "datatype": "string",
+      "description": "Host port of SQL Server (database module), shown in the README and in appsettings.Development.json. starter-init passes another one when 1433 is taken.",
+      "defaultValue": "1433",
+      "replaces": "1433",
+      "onlyIf": [{ "after": "localhost," }]
+    },
     "defaultDatabaseName": {
       "type": "generated",
       "generator": "regex",

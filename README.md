@@ -30,7 +30,8 @@ features: `About` (`GET /api/v1/about`, the API's version and the components it'
   body (404...) and exceptions (`UseExceptionHandler`). With a data module, a unique index violation
   gets a 409 Conflict (`UniqueConstraintExceptionHandler`) instead of a 500.
 - A `Dockerfile` for the API and a `compose.yaml` that builds and runs it: `docker compose up --build`.
-- A `README.md` for the generated solution, written for the selected modules.
+- A `README.md` for the generated solution, written for the selected modules. It starts with a table of the
+  local links (API, Scalar, Swagger UI, health, telemetry dashboard) and the data choice, database name and port included.
 - Health checks for Kubernetes probes: `/actuator/health/liveness` (no checks: the process
   answers) and `/actuator/health/readiness` (checks tagged `ready`, the database included with
   `inmemory` or `database`).

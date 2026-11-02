@@ -2,6 +2,39 @@
 
 Une minimal API .NET 10 organisée en tranches verticales, générée avec project-initializr.
 
+## En bref
+
+Les liens répondent une fois l'API lancée avec `dotnet run` (profil `http`).
+
+| | |
+| --- | --- |
+| API | <http://localhost:5154/api/v1/about> |
+<!--#if (UseScalar) -->
+| Scalar | <http://localhost:5154/scalar> |
+<!--#endif -->
+<!--#if (UseSwaggerUi) -->
+| Swagger UI | <http://localhost:5154/swagger> |
+<!--#endif -->
+<!--#if (UseScalar || UseSwaggerUi) -->
+| Document OpenAPI | <http://localhost:5154/openapi/v1.json> |
+<!--#else -->
+| Documentation de l'API | Aucune (ni Scalar ni Swagger UI) |
+<!--#endif -->
+| Santé | <http://localhost:5154/actuator/health/readiness> |
+<!--#if (UseTelemetry) -->
+| Télémétrie (tableau de bord Aspire) | <http://localhost:18888> |
+<!--#else -->
+| Télémétrie | Non sélectionnée |
+<!--#endif -->
+<!--#if (UseDatabase) -->
+| Base de données | SQL Server `localhost,1433`, base `StarterTemplate`, utilisateur `sa`, mot de passe dans `.env` |
+<!--#elseif (UseInMemory) -->
+| Base de données | SQLite en mémoire, vidée à chaque arrêt de l'API |
+<!--#else -->
+| Base de données | Aucune : un store en mémoire par feature |
+<!--#endif -->
+| Dans un conteneur | <http://localhost:8080/api/v1/about> (`docker compose up --build`) |
+
 ## Prérequis
 
 - Le SDK .NET 10.
