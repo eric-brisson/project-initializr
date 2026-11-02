@@ -1,32 +1,32 @@
-# Runs the API in a container, built from its Dockerfile: docker compose up --build
+# Exécute l'API dans un conteneur, construit à partir de son Dockerfile : docker compose up --build
 #if (UseDatabase)
-# For development (dotnet run), start only SQL Server: docker compose up -d sqlserver
-# The sa password comes from .env (not committed), written by starter-init along with the API's user secrets.
+# Pour le développement (dotnet run), démarrez seulement SQL Server : docker compose up -d sqlserver
+# Le mot de passe sa vient de .env (non versionné), écrit par starter-init avec les secrets utilisateur de l'API.
 #endif
 #if (UseTelemetry)
-# For local telemetry with dotnet run, start the dashboard: docker compose up -d dashboard
+# Pour la télémétrie locale avec dotnet run, démarrez le tableau de bord : docker compose up -d dashboard
 #endif
-# The project name fixes the container, image and volume names, whatever the folder is called.
+# Le nom du projet fixe les noms des conteneurs, de l'image et du volume, quel que soit le nom du dossier.
 name: starter-template
 services:
   api:
     build:
       context: .
       dockerfile: src/Starter.Template.Api/Dockerfile
-    # Production settings (appsettings.json), as when deployed: no Scalar or Swagger UI, which are Development only.
-    # Set API_PORT in .env if another app already uses 8080.
+    # Configuration de Production (appsettings.json), comme une fois déployée : ni Scalar ni Swagger UI, réservés à Development.
+    # Définissez API_PORT dans .env si une autre application utilise déjà le port 8080.
     ports:
       - "${API_PORT:-8080}:8080"
 #if (UseDatabase || UseTelemetry)
     environment:
 #endif
 #if (UseDatabase)
-      # The database must exist and be migrated (starter-init does both). The password is quoted so a ; in it
-      # doesn't end the value, which means it can't contain a double quote.
+      # La base doit exister et être migrée (starter-init fait les deux). Le mot de passe est entre guillemets pour
+      # qu'un ; ne coupe pas la valeur : il ne peut donc pas contenir de guillemet double.
       ConnectionStrings__Default: 'Server=sqlserver,1433;Database=StarterTemplate;User Id=sa;Password="${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}";TrustServerCertificate=True'
 #endif
 #if (UseTelemetry)
-      # Sends the traces, metrics and logs to the dashboard below.
+      # Envoie les traces, les métriques et les logs au tableau de bord ci-dessous.
       OTEL_EXPORTER_OTLP_ENDPOINT: http://dashboard:18889
 #endif
 #if (UseDatabase)
@@ -36,12 +36,12 @@ services:
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    # Microsoft only publishes amd64 images; Docker Desktop emulates it on Apple Silicon.
+    # Microsoft ne publie que des images amd64 : Docker Desktop les émule sur Apple Silicon.
     platform: linux/amd64
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
-    # Set MSSQL_PORT in .env if another SQL Server already uses 1433.
+    # Définissez MSSQL_PORT dans .env si un autre SQL Server utilise déjà le port 1433.
     ports:
       - "${MSSQL_PORT:-1433}:1433"
     volumes:
@@ -53,9 +53,9 @@ services:
       retries: 10
       start_period: 20s
 
-  # Applies the scripts of db/migrations: docker compose run --rm flyway
-  # In a profile, so "docker compose up" doesn't run it: the database must exist before Flyway runs.
-  # The integration tests use the same image (SqlServerDatabase.cs): keep both tags in sync.
+  # Applique les scripts de db/migrations : docker compose run --rm flyway
+  # Dans un profil, pour que « docker compose up » ne le lance pas : la base doit exister avant Flyway.
+  # Les tests d'intégration utilisent la même image (SqlServerDatabase.cs) : gardez les deux tags identiques.
   flyway:
     image: flyway/flyway:13.10
     profiles: [migrations]
@@ -72,9 +72,9 @@ services:
 #endif
 #if (UseTelemetry)
 
-  # The Aspire dashboard: traces, metrics and logs of the API on http://localhost:18888
-  # It receives them over OTLP on port 4317, and keeps them in memory only: they're gone when it stops.
-  # Local use only, so without login. Deployed in ARO, the API is instrumented by Dynatrace OneAgent instead.
+  # Le tableau de bord Aspire : traces, métriques et logs de l'API sur http://localhost:18888
+  # Il les reçoit en OTLP sur le port 4317 et les garde en mémoire seulement : elles disparaissent à son arrêt.
+  # Usage local uniquement, donc sans connexion. Déployée dans ARO, l'API est instrumentée par Dynatrace OneAgent.
   dashboard:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:13.6
     environment:

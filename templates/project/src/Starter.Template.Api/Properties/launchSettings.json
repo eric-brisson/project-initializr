@@ -9,6 +9,7 @@
       "applicationUrl": "http://localhost:5154",
       "environmentVariables": {
         "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+        "Telemetry__StartDashboard": "true",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
@@ -20,6 +21,7 @@
       "applicationUrl": "https://localhost:7021;http://localhost:5154",
       "environmentVariables": {
         "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+        "Telemetry__StartDashboard": "true",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }

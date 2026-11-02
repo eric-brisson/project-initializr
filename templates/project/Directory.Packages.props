@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!--#if (UseDatabase) -->
-    <!-- Lets the "Security" versions below override the ones dependencies ask for. -->
+    <!-- Permet aux versions « Security » ci-dessous de remplacer celles demandées par les dépendances. -->
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <!--#endif -->
   </PropertyGroup>
@@ -32,14 +32,14 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1" />
     <!--#if (UseDatabase) -->
-    <!-- Stable, unlike the EF Core instrumentation (still in beta), and it sees the queries of EF Core too. -->
+    <!-- Stable, contrairement à l'instrumentation EF Core (encore en bêta), et elle voit aussi les requêtes d'EF Core. -->
     <PackageVersion Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.20.1" />
     <!--#endif -->
   </ItemGroup>
   <!--#endif -->
   <!--#if (UseDatabase) -->
   <ItemGroup Label="Security">
-    <!-- Microsoft.Data.SqlClient 6.1 depends on 9.0.11, which has known vulnerabilities (fixed in 10.0.13). -->
+    <!-- Microsoft.Data.SqlClient 6.1 dépend de la 9.0.11, qui a des vulnérabilités connues (corrigées en 10.0.13). -->
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
   </ItemGroup>
   <!--#endif -->

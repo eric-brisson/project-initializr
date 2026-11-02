@@ -166,7 +166,7 @@ internal static partial class Program
                 "docker compose run --rm flyway");
         }
 
-        Instruction($"Complétez les TODO : les propriétés de {name}, de {name}Dto (et sa Projection) et des requêtes de création et de modification.");
+        Instruction($"Complétez les TODO : les propriétés de {name}, de {name}Dto (et sa méthode From) et des requêtes de création et de modification.");
 
         Ui.Line(project.Data == "sqlserver"
             ? $"[grey]Les tests d'intégration de {plural} échouent tant que la feature n'est pas branchée et la table créée.[/]"

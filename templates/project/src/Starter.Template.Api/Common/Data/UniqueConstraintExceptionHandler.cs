@@ -8,10 +8,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Starter.Template.Api.Common.Data;
 
-// Turns a unique index violation into a 409 Conflict problem details response. The database is the only place
-// that can enforce uniqueness: two requests can both pass a check made beforehand, and only one insert wins.
-// Any other exception goes on to the default handler (UseExceptionHandler in Program.cs): a 500 problem details
-// response, with the exception in the logs only.
+// Transforme une violation d'index unique en réponse problem details 409 Conflict. Seule la base peut garantir
+// l'unicité : deux requêtes peuvent passer une vérification faite avant, et une seule insertion gagne.
+// Toute autre exception passe au gestionnaire par défaut (UseExceptionHandler dans Program.cs) : une réponse
+// problem details 500, avec l'exception seulement dans les logs.
 internal sealed class UniqueConstraintExceptionHandler(IProblemDetailsService problemDetails) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
@@ -34,11 +34,11 @@ internal sealed class UniqueConstraintExceptionHandler(IProblemDetailsService pr
     }
 
 #if (UseDatabase)
-    // 2601: duplicate key in a unique index, 2627: in a unique constraint or a primary key.
+    // 2601 : clé en double dans un index unique, 2627 : dans une contrainte unique ou une clé primaire.
     private static bool IsUniqueViolation(Exception? exception) =>
         exception is SqlException { Number: 2601 or 2627 };
 #else
-    // SQLITE_CONSTRAINT_UNIQUE (2067) and SQLITE_CONSTRAINT_PRIMARYKEY (1555).
+    // SQLITE_CONSTRAINT_UNIQUE (2067) et SQLITE_CONSTRAINT_PRIMARYKEY (1555).
     private static bool IsUniqueViolation(Exception? exception) =>
         exception is SqliteException { SqliteExtendedErrorCode: 2067 or 1555 };
 #endif

@@ -14,7 +14,7 @@ public static class GetTechnology
             .WithName(nameof(GetTechnology));
     }
 
-    // The 404 gets a problem details body from UseStatusCodePages (Program.cs).
+    // Le 404 reçoit un corps problem details grâce à UseStatusCodePages (Program.cs).
 #if (UseEfCore)
     internal static async Task<Results<Ok<TechnologyDto>, NotFound>> Handle(
         int id,
@@ -22,11 +22,10 @@ public static class GetTechnology
         CancellationToken cancellationToken)
     {
         var item = await db.Set<Technology>()
-            .Where(item => item.Id == id)
-            .Select(TechnologyDto.Projection)
-            .FirstOrDefaultAsync(cancellationToken);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
 
-        return item is null ? TypedResults.NotFound() : TypedResults.Ok(item);
+        return item is null ? TypedResults.NotFound() : TypedResults.Ok(TechnologyDto.From(item));
     }
 #else
     internal static Results<Ok<TechnologyDto>, NotFound> Handle(int id, TechnologyStore store) =>

@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Starter.Template.Api.UnitTests.Features.Technologies;
 
-// The store of a project without a data module. With EF Core, the integration tests cover the database.
+// Le store d'un projet sans module de données. Avec EF Core, les tests d'intégration couvrent la base.
 public class TechnologyStoreTests
 {
     private readonly TechnologyStore _store = new();

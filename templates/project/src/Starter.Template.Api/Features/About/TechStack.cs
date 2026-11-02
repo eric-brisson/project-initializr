@@ -2,7 +2,7 @@ using System.Reflection;
 
 namespace Starter.Template.Api.Features.About;
 
-// The API and the main components it's built with, read from the loaded assemblies once.
+// L'API et ses principaux composants, lus une seule fois dans les assemblies chargées.
 internal static class TechStack
 {
     public static GetAbout.AboutResponse About { get; } = new(
@@ -32,7 +32,7 @@ internal static class TechStack
             ?? type.Assembly.GetName().Version?.ToString()
             ?? "unknown";
 
-        // Drop the "+<commit hash>" suffix added to informational versions.
+        // Retire le suffixe « +<hash du commit> » ajouté aux versions informatives.
         return version.Split('+')[0];
     }
 }

@@ -1,5 +1,5 @@
 {
-  // Read by "starter-init feature" to generate features that match this project.
+  // Lu par « starter-init feature » pour générer des features adaptées à ce projet.
   "solution": "Starter.Template",
   //#if (!UseEfCore)
   "data": "none"

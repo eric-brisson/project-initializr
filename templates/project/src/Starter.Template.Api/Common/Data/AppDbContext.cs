@@ -2,12 +2,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Starter.Template.Api.Common.Data;
 
-// One context for reads and writes. Read handlers project to DTOs (or use AsNoTracking), so nothing is tracked.
-// Consider a separate read-only context once reads go to a read replica.
+// Un seul contexte pour les lectures et les écritures. Les handlers de lecture utilisent AsNoTracking : rien n'est suivi.
+// Envisagez un contexte en lecture seule séparé le jour où les lectures iront vers un réplica.
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    // Each feature maps its own entities, in IEntityTypeConfiguration classes next to them, and reaches them
-    // with Set<TEntity>(): the context doesn't need to know the features.
+    // Chaque feature mappe ses propres entités, dans des classes IEntityTypeConfiguration à côté d'elles, et y accède
+    // avec Set<TEntity>() : le contexte n'a pas besoin de connaître les features.
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 }

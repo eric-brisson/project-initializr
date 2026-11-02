@@ -14,34 +14,34 @@ namespace Starter.Template.Api;
 
 public class Program
 {
-    // Health checks registered with this tag decide readiness, e.g. AddDbContextCheck<AppDbContext>(tags: [Program.ReadyTag]).
+    // Les vérifications de santé enregistrées avec ce tag décident de la disponibilité, par exemple AddDbContextCheck<AppDbContext>(tags: [Program.ReadyTag]).
     public const string ReadyTag = "ready";
 
     public static void Main(string[] args)
     {
-        // Configuration sources, each overriding the previous ones: appsettings.json, appsettings.{Environment}.json,
-        // user secrets (Development only: dotnet user-secrets set <key> <value>), environment variables, command line.
+        // Sources de configuration, chacune remplaçant les précédentes : appsettings.json, appsettings.{Environment}.json,
+        // secrets utilisateur (Development seulement : dotnet user-secrets set <clé> <valeur>), variables d'environnement, ligne de commande.
         var builder = WebApplication.CreateBuilder(args);
 
         builder.Services.AddAuthorization();
 
-        // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+        // Pour en savoir plus sur la configuration d'OpenAPI : https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
 
-        // Error responses use the RFC 9457 problem details format: validation failures, error status codes
-        // returned without a body (404...) and exceptions (see UseExceptionHandler below).
+        // Les réponses d'erreur suivent le format problem details de la RFC 9457 : échecs de validation, codes d'erreur
+        // renvoyés sans corps (404...) et exceptions (voir UseExceptionHandler plus bas).
         builder.Services.AddProblemDetails();
 
-        // Validates minimal API parameters annotated with data annotations ([Required], [StringLength], ...).
+        // Valide les paramètres des minimal APIs annotés avec des data annotations ([Required], [StringLength], ...).
         builder.Services.AddValidation();
 
-        // Probes for the orchestrator (Kubernetes...), mapped under /actuator/health below.
+        // Sondes pour l'orchestrateur (Kubernetes...), mappées sous /actuator/health plus bas.
         builder.Services.AddHealthChecks();
 
         builder.Services.AddFeatures();
 #if (UseTelemetry)
 
-        // Traces, metrics and logs for the local Aspire dashboard, only when its address is set (launchSettings.json).
+        // Traces, métriques et logs pour le tableau de bord Aspire local, seulement quand son adresse est définie (launchSettings.json).
         builder.AddTelemetry();
 #endif
 #if (UseEfCore)
@@ -51,12 +51,12 @@ public class Program
 
         var app = builder.Build();
 
-        // First in the pipeline, so it catches the exceptions of everything after it. The handlers registered with
-        // AddExceptionHandler get the first try; otherwise the response is a 500 problem details, without the
-        // exception (it's in the logs). In Development too, so the responses are the same as in Production.
+        // En premier dans le pipeline, pour attraper les exceptions de tout ce qui suit. Les gestionnaires enregistrés avec
+        // AddExceptionHandler passent d'abord ; sinon la réponse est un problem details 500, sans l'exception (elle est
+        // dans les logs). En Development aussi, pour que les réponses soient les mêmes qu'en Production.
         app.UseExceptionHandler();
 
-        // Gives a problem details body to the error status codes returned without one (404, 405...).
+        // Donne un corps problem details aux codes d'erreur renvoyés sans corps (404, 405...).
         app.UseStatusCodePages();
 #if (UseInMemory)
 
@@ -78,11 +78,11 @@ public class Program
 
         app.UseAuthorization();
 
-        // Liveness: the process is up and answers. It runs no check, so a database outage
-        // makes the app not ready (no traffic) instead of getting it restarted.
+        // Vivacité : le processus tourne et répond. Aucune vérification : une panne de la base rend l'application
+        // non disponible (plus de trafic) au lieu de la faire redémarrer.
         app.MapHealthChecks("/actuator/health/liveness", new HealthCheckOptions { Predicate = _ => false });
 
-        // Readiness: every check tagged "ready" passes, so the app can take traffic.
+        // Disponibilité : toutes les vérifications marquées « ready » passent, l'application peut recevoir du trafic.
         app.MapHealthChecks("/actuator/health/readiness", new HealthCheckOptions
         {
             Predicate = check => check.Tags.Contains(ReadyTag),

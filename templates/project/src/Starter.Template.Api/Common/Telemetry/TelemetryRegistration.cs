@@ -7,10 +7,10 @@ namespace Starter.Template.Api.Common.Telemetry;
 
 public static class TelemetryRegistration
 {
-    // The standard OpenTelemetry variable: where to send the traces, metrics and logs (OTLP). The launch profiles set it
-    // to the local Aspire dashboard (docker compose up -d dashboard), and compose.yaml for the API container.
-    // Nowhere else, so nothing is registered when deployed: in ARO, Dynatrace OneAgent instruments the API by itself,
-    // and both together would record everything twice.
+    // La variable standard d'OpenTelemetry : où envoyer les traces, les métriques et les logs (OTLP). Les profils de
+    // lancement la règlent vers le tableau de bord Aspire local (docker compose up -d dashboard), et compose.yaml pour le
+    // conteneur de l'API. Nulle part ailleurs : une fois déployée, rien n'est enregistré. Dans ARO, Dynatrace OneAgent
+    // instrumente l'API de lui-même, et les deux ensemble enregistreraient tout en double.
     public const string EndpointVariable = "OTEL_EXPORTER_OTLP_ENDPOINT";
 
     public static WebApplicationBuilder AddTelemetry(this WebApplicationBuilder builder)
@@ -26,12 +26,12 @@ public static class TelemetryRegistration
             {
                 tracing
                     .AddSource(AppTelemetry.Name)
-                    // Only the API routes: the requests of Scalar, Swagger UI or the health probes would bury them.
+                    // Seulement les routes de l'API : les requêtes de Scalar, de Swagger UI ou des sondes les noieraient.
                     .AddAspNetCoreInstrumentation(options => options.Filter = context => context.Request.Path.StartsWithSegments("/api"))
                     .AddHttpClientInstrumentation();
 #if (UseDatabase)
 
-                // The SQL queries, the ones of EF Core included, which goes through SqlClient.
+                // Les requêtes SQL, y compris celles d'EF Core, qui passe par SqlClient.
                 tracing.AddSqlClientInstrumentation();
 #endif
             })
@@ -40,14 +40,20 @@ public static class TelemetryRegistration
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation())
-            // The logs too, each one linked to the span it was written in.
+            // Les logs aussi, chacun relié au span pendant lequel il a été écrit.
             .WithLogging(configureBuilder: null, configureOptions: options =>
             {
                 options.IncludeScopes = true;
                 options.IncludeFormattedMessage = true;
             })
-            // One exporter for the three, configured by the OTEL_EXPORTER_OTLP_* variables.
+            // Un seul exportateur pour les trois, configuré par les variables OTEL_EXPORTER_OTLP_*.
             .UseOtlpExporter();
+
+        // Démarre le tableau de bord local quand l'API est lancée depuis un profil de lancement (F5, dotnet run).
+        if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>(DashboardLauncher.EnabledKey))
+        {
+            builder.Services.AddHostedService<DashboardLauncher>();
+        }
 
         return builder;
     }

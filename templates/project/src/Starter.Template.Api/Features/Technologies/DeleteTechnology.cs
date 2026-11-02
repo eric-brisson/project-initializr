@@ -20,7 +20,7 @@ public static class DeleteTechnology
         AppDbContext db,
         CancellationToken cancellationToken)
     {
-        // One DELETE statement, without loading the Technology first.
+        // Une seule instruction DELETE, sans charger l'élément d'abord.
         var deleted = await db.Set<Technology>()
             .Where(item => item.Id == id)
             .ExecuteDeleteAsync(cancellationToken);

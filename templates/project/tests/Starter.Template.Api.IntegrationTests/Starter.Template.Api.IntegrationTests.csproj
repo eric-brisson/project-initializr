@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <!--#if (UseDatabase) -->
-  <!-- The Flyway scripts, copied next to the test assembly for SqlServerDatabase. -->
+  <!-- Les scripts Flyway, copiés à côté de l'assembly de test pour SqlServerDatabase. -->
   <ItemGroup>
     <None Include="..\..\db\migrations\*.sql" LinkBase="migrations" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

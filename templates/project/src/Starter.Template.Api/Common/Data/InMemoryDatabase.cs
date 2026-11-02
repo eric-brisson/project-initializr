@@ -2,9 +2,9 @@ using Microsoft.Data.Sqlite;
 
 namespace Starter.Template.Api.Common.Data;
 
-// An in-memory SQLite database lives as long as one connection to it is open. This one stays open for the
-// app's lifetime, while each DbContext opens its own connection to the same database (shared cache).
-// The name is unique per instance, so test servers running side by side don't share their data.
+// Une base SQLite en mémoire existe tant qu'une connexion vers elle reste ouverte. Celle-ci reste ouverte pendant toute
+// la vie de l'application, et chaque DbContext ouvre sa propre connexion vers la même base (cache partagé).
+// Le nom est unique par instance : des serveurs de test lancés en parallèle ne partagent pas leurs données.
 public sealed class InMemoryDatabase : IDisposable
 {
     private readonly SqliteConnection _keepAlive;

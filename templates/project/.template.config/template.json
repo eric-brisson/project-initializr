@@ -144,6 +144,7 @@
           "exclude": [
             "src/Starter.Template.Api/Common/Telemetry/**",
             "tests/Starter.Template.Api.IntegrationTests/TelemetryTests.cs",
+            "tests/Starter.Template.Api.UnitTests/Common/Telemetry/**",
             "src/Starter.Template.Api/Properties/launchSettings.json"
           ],
           "rename": {
@@ -160,10 +161,7 @@
         },
         {
           "condition": "(!UseEfCore)",
-          "exclude": [
-            "src/Starter.Template.Api/Common/Data/**",
-            "src/Starter.Template.Api/Features/Technologies/TechnologyConfiguration.cs"
-          ]
+          "exclude": ["src/Starter.Template.Api/Common/Data/**"]
         },
         {
           "condition": "(UseEfCore)",

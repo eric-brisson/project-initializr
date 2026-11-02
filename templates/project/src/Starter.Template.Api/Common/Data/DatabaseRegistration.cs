@@ -6,8 +6,8 @@ namespace Starter.Template.Api.Common.Data;
 public static class DatabaseRegistration
 {
 #if (UseDatabase)
-    // The schema comes from the Flyway scripts in db/migrations, not from EF Core migrations.
-    // In development, the connection string (with the password) is in the API's user secrets.
+    // Le schéma vient des scripts Flyway de db/migrations, pas des migrations EF Core.
+    // En développement, la chaîne de connexion (avec le mot de passe) est dans les secrets utilisateur de l'API.
     public static WebApplicationBuilder AddDatabase(this WebApplicationBuilder builder)
     {
         var connectionString = builder.Configuration.GetConnectionString("Default")
@@ -17,10 +17,10 @@ public static class DatabaseRegistration
             .UseSqlServer(connectionString)
             .ConfigureWarnings(SaveChangesFailedAsDebug));
 
-        // Not ready while the database can't be reached.
+        // Pas prête tant que la base est injoignable.
         builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>(tags: [Program.ReadyTag]);
 
-        // A duplicate value in a unique index gets a 409 Conflict instead of a 500.
+        // Une valeur en double dans un index unique donne un 409 Conflict au lieu d'un 500.
         builder.Services.AddExceptionHandler<UniqueConstraintExceptionHandler>();
 
         return builder;
@@ -35,13 +35,13 @@ public static class DatabaseRegistration
 
         builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>(tags: [Program.ReadyTag]);
 
-        // A duplicate value in a unique index gets a 409 Conflict instead of a 500.
+        // Une valeur en double dans un index unique donne un 409 Conflict au lieu d'un 500.
         builder.Services.AddExceptionHandler<UniqueConstraintExceptionHandler>();
 
         return builder;
     }
 
-    // The database starts empty each time: create its tables from the EF Core model.
+    // La base démarre vide à chaque fois : crée ses tables à partir du modèle EF Core.
     public static WebApplication CreateDatabase(this WebApplication app)
     {
         using var scope = app.Services.CreateScope();
@@ -51,9 +51,9 @@ public static class DatabaseRegistration
     }
 #endif
 
-    // EF Core logs a failed SaveChanges as an error, with its stack trace, before the exception goes up. A duplicate
-    // name would then leave an error in the logs (Splunk) for a plain 409. The exception still reaches the exception
-    // handler, which logs it as an error when it isn't a unique index violation, so nothing real goes unseen.
+    // EF Core journalise un SaveChanges en échec comme une erreur, avec sa pile d'appels, avant que l'exception remonte.
+    // Un nom en double laisserait alors une erreur dans les logs (Splunk) pour un simple 409. L'exception atteint quand même
+    // le gestionnaire d'exceptions, qui la journalise en erreur si ce n'est pas une violation d'index unique : rien ne passe inaperçu.
     private static void SaveChangesFailedAsDebug(WarningsConfigurationBuilder warnings) =>
         warnings.Log((CoreEventId.SaveChangesFailed, LogLevel.Debug));
 }

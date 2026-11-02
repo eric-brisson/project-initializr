@@ -62,7 +62,11 @@ features: `About` (`GET /api/v1/about`, the API's version and the components it'
   ASP.NET Core, HttpClient, runtime and, with `database`, SqlClient (EF Core's queries included).
   The SDK is registered only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, which the launch profiles
   and `compose.yaml` do. Deployed, it isn't set, so nothing doubles what Dynatrace OneAgent records.
-  `CreateTechnology` shows a custom span and metric; generated features don't get them.
+  The CLI starts the dashboard after generating the project. Launched from a launch profile (F5,
+  `dotnet run`), the API also starts it when nothing listens on port 4317 (`DashboardLauncher`, enabled by
+  `Telemetry__StartDashboard` in the launch profiles), in the background; without Docker, it logs a warning.
+  No slice has telemetry code: `AppTelemetry` holds the source and meter for custom spans and metrics,
+  with a comment on when they're worth writing.
   `launchSettings.json` can't hold the template's comment markers (`dotnet run` rejects comments
   there), so it comes in two copies: `launchSettings.json` with the variable, and
   `launchSettings.notelemetry.json` without it, renamed when the module isn't selected. Keep them in sync.
@@ -78,13 +82,14 @@ dotnet new project-initializr -n Sample.Orders -o ./Sample.Orders --modules ""
 
 ## The feature template
 
-Adds a CRUD feature to a generated solution: `Features/<Plural>` with the five slices (list,
-get, create, update, delete), the entity, its DTO, the endpoint and service registrations,
-and one integration test file per endpoint. The entity starts with `Id` and a unique `Name`, and
-`// TODO` comments mark where your own properties go. The DTO maps the entity in one place, a
-`Projection` expression that EF Core translates to SQL. With a data module (`--data sqlite` or
-`--data sqlserver`), the handlers use `AppDbContext` and an `IEntityTypeConfiguration` maps the
-entity; without one (`--data none`), they use a singleton in-memory store, with its unit tests.
+Adds a CRUD feature to a generated solution: `Features/<Plural>` with one file per slice (list,
+get, create, update, delete), the entity (`<Name>.cs`), its DTO (`<Name>Dto.cs`, whose `From` method
+is the one mapping from the entity), the feature file that registers its services and routes
+(`<Plural>Feature.cs`), and one integration test file per endpoint. The entity starts with `Id` and a
+unique `Name`, and `// TODO` comments mark where your own properties go. With a data module
+(`--data sqlite` or `--data sqlserver`), the handlers use `AppDbContext`, and the entity file also
+holds its EF Core mapping; without one (`--data none`), they use a singleton in-memory store, with
+its unit tests.
 
 The template has no files of its own: it reads the `Technologies` feature of the project template
 (`templates/feature/.template.config/template.json`, `sources`), and renames `Technology`,
@@ -108,8 +113,10 @@ Asks for the template, the folder, the solution name, the modules and whether to
 `git init` (unless the folder is already in a repo), then generates,
 restores, builds and tests the project. The prompts and messages are in French.
 
-The modules of the Données group (SQLite en mémoire, SQL Server) work like radio buttons:
-checking one unchecks the other.
+The modules are asked step by step, one question per category, in the order they are declared in
+`Templates.cs`: the API documentation (several boxes to check), the data storage (one choice, with
+« Aucune base de données » first) and the local telemetry (yes or no). A category declares its badge, its
+question and whether it allows only one choice; a category with a single module is asked as yes or no.
 
 With the database module, it also asks for the database name and the sa password, starts
 SQL Server in Docker, creates the database, applies the Flyway migrations and shows how to connect. The password is stored twice: the full

@@ -1,7 +1,7 @@
 namespace Starter.Template.Api.Features.Technologies;
 
-// The Technologies, kept in memory until the app restarts (registered as a singleton), for a project without
-// a data module. Names are unique in any case, like the unique index of the database version.
+// Garde les Technologies en mémoire jusqu'au redémarrage de l'application (enregistré en singleton), pour un projet
+// sans module de données. Les noms sont uniques sans tenir compte de la casse, comme l'index unique de la version base de données.
 public sealed class TechnologyStore
 {
     private readonly Lock _lock = new();
@@ -31,7 +31,7 @@ public sealed class TechnologyStore
         }
     }
 
-    // Gives the Technology its id. False when another one already has the name.
+    // Attribue un id à l'élément. False quand un autre élément porte déjà ce nom.
     public bool TryAdd(Technology item)
     {
         lock (_lock)

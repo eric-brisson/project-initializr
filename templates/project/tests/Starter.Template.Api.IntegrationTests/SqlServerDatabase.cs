@@ -5,8 +5,8 @@ using Testcontainers.MsSql;
 
 namespace Starter.Template.Api.IntegrationTests;
 
-// A throwaway SQL Server in Docker, migrated by the same Flyway image and scripts as compose.yaml.
-// Without Docker, the tests are skipped, except on a CI server (CI is set by GitHub Actions) where they fail.
+// Un SQL Server jetable dans Docker, migré par la même image et les mêmes scripts Flyway que compose.yaml.
+// Sans Docker, les tests sont ignorés, sauf sur un serveur d'intégration continue (GitHub Actions définit CI), où ils échouent.
 internal sealed class SqlServerDatabase : IAsyncDisposable
 {
     private const string DatabaseName = "StarterTemplate";
@@ -67,7 +67,7 @@ internal sealed class SqlServerDatabase : IAsyncDisposable
         await command.ExecuteNonQueryAsync();
     }
 
-    // The scripts are copied next to the test assembly (see the .csproj), then into the Flyway container.
+    // Les scripts sont copiés à côté de l'assembly de test (voir le .csproj), puis dans le conteneur Flyway.
     private async Task MigrateAsync(string saPassword)
     {
         await using var flyway = new ContainerBuilder(FlywayImage)

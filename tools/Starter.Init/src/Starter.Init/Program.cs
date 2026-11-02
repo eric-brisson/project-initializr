@@ -76,19 +76,16 @@ internal static partial class Program
             }
         }
 
-        var modules = interactive && template.Modules.Count > 0
-            ? new MultiSelectPrompt<Templates.Module>(
-                    template.Modules,
-                    module => module.Category,
-                    module => module.Name,
-                    module => module.Description,
-                    module => module.SelectedByDefault,
-                    module => module.Exclusive)
-                .Ask("modules", "Quels modules voulez-vous ajouter ?")
+        var modules = interactive
+            ? AskModules(template)
             : [.. template.Modules.Where(module => module.SelectedByDefault)];
 
         var database = interactive && modules.Any(module => module.Id == Templates.DatabaseId)
             ? await PrepareDatabaseAsync(AskDatabaseName(name), AskSaPassword())
+            : null;
+
+        DashboardPlan? dashboard = modules.Any(module => module.Id == Templates.TelemetryId)
+            ? await PrepareDashboardAsync(database)
             : null;
 
         if (Directory.Exists(Path.Combine(outputDir!, "src", $"{name}.Api")))
@@ -128,7 +125,7 @@ internal static partial class Program
                 : "[grey]Pas de premier commit : configurez user.name et user.email dans Git[/]");
         }
 
-        var summary = Summary(template, outputDir!, name, modules, database, initGit, commit, keepGitignore, replaceGitignore);
+        var summary = Summary(template, outputDir!, name, modules, database, dashboard, initGit, commit, keepGitignore, replaceGitignore);
         if (interactive && !AskYesNo("créer", "Tout est prêt. Générer le projet ?", details: summary))
         {
             return 0;
@@ -171,6 +168,13 @@ internal static partial class Program
                         () => Docker.MigrateAsync(outputDir!)),
                 ]
                 : Array.Empty<Step>()),
+            .. (dashboard == DashboardPlan.Start
+                ?
+                [
+                    new Step("Démarrage du tableau de bord de télémétrie", "Tableau de bord de télémétrie démarré",
+                        () => Docker.StartDashboardAsync(outputDir!)),
+                ]
+                : Array.Empty<Step>()),
         ];
 
         // Keeping the existing .gitignore: move it aside while generating, then put it back.
@@ -204,6 +208,14 @@ internal static partial class Program
     }
 
     private sealed record Step(string Running, string Done, Func<Task<ProcessRunner.Result>> Run);
+
+    // What happens to the Aspire dashboard of the telemetry module once the project is generated.
+    private enum DashboardPlan
+    {
+        Start,
+        AlreadyRunning,
+        NoDocker,
+    }
 
     // UseDocker is false when Docker isn't available: the project is still configured, the container just isn't started.
     private sealed record Database(string Name, string SaPassword, int Port, bool UseDocker);
@@ -239,6 +251,19 @@ internal static partial class Program
         }
 
         return new Database(databaseName, saPassword, port, useDocker);
+    }
+
+    // Started like SQL Server, at the end. Not when something already receives telemetry on the port (the dashboard
+    // of another project works just as well), nor without Docker: the API then starts it itself, in debug.
+    // With the database module, Docker was already checked (and maybe started): no need to ask again.
+    private static async Task<DashboardPlan> PrepareDashboardAsync(Database? database)
+    {
+        if (!Docker.IsPortFree(Docker.OtlpPort))
+        {
+            return DashboardPlan.AlreadyRunning;
+        }
+
+        return database?.UseDocker ?? await Docker.IsAvailableAsync() ? DashboardPlan.Start : DashboardPlan.NoDocker;
     }
 
     // Docker Desktop is often just not started yet: offer to start it (or retry) rather than going on without SQL Server.
@@ -385,6 +410,52 @@ internal static partial class Program
         Ui.Badge("starter", $"Bienvenue dans Starter Init ! [grey](v{version})[/]", Ui.Success);
     }
 
+    // One question per category, step by step, in the order the modules are declared (see Templates.Category).
+    private static List<Templates.Module> AskModules(Templates.Choice template)
+    {
+        var selected = new List<Templates.Module>();
+        foreach (var group in template.Modules.GroupBy(module => module.Category))
+        {
+            var (category, modules) = (group.Key, group.ToList());
+
+            if (category.OneChoice)
+            {
+                // None first: a project without the module stays the default.
+                Templates.Module?[] choices = [null, .. modules];
+                var choice = new SelectPrompt<Templates.Module?>(
+                        choices,
+                        module => module?.Name ?? category.None ?? "Aucun",
+                        module => module is null ? category.NoneDescription : module.Description)
+                    .Ask(category.Badge, category.Question);
+                selected.AddRange(choice is null ? [] : [choice]);
+            }
+            else if (modules is [var module])
+            {
+                (string Label, bool Value)[] answers = module.SelectedByDefault
+                    ? [("Oui", true), ("Non", false)]
+                    : [("Non", false), ("Oui", true)];
+                var add = new SelectPrompt<(string Label, bool Value)>(
+                        answers,
+                        answer => answer.Label,
+                        answer => answer.Value ? module.Description : null)
+                    .Ask(category.Badge, category.Question)
+                    .Value;
+                selected.AddRange(add ? [module] : []);
+            }
+            else
+            {
+                selected.AddRange(new MultiSelectPrompt<Templates.Module>(
+                        modules,
+                        module => module.Name,
+                        module => module.Description,
+                        module => module.SelectedByDefault)
+                    .Ask(category.Badge, category.Question));
+            }
+        }
+
+        return selected;
+    }
+
     private static string AskOutputDir()
     {
         var current = Directory.GetCurrentDirectory();
@@ -472,6 +543,7 @@ internal static partial class Program
         string name,
         IReadOnlyList<Templates.Module> modules,
         Database? database,
+        DashboardPlan? dashboard,
         bool initGit,
         bool commit,
         bool keepGitignore,
@@ -495,6 +567,16 @@ internal static partial class Program
                 ? "démarrée dans Docker"
                 : $"[{Ui.Warning.ToMarkup()}]Docker indisponible, SQL Server ne sera pas démarré[/]";
             rows.Add(("Base de données", $"{Markup.Escape(database.Name)}, port {database.Port}, {docker}"));
+        }
+
+        if (dashboard is not null)
+        {
+            rows.Add(("Télémétrie", dashboard switch
+            {
+                DashboardPlan.Start => "tableau de bord démarré dans Docker",
+                DashboardPlan.AlreadyRunning => $"un tableau de bord écoute déjà sur le port {Docker.OtlpPort}",
+                _ => $"[{Ui.Warning.ToMarkup()}]Docker indisponible, le tableau de bord démarrera avec l'API en debug[/]",
+            }));
         }
 
         if (initGit)

@@ -1,27 +1,27 @@
 <Project>
 
-  <!-- Shared by every project of the solution. A .csproj can still override a property. -->
+  <!-- Commun à tous les projets de la solution. Un .csproj peut toujours redéfinir une propriété. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
-  <!-- Code quality: the .NET analyzers at their recommended level, the style rules of .editorconfig checked
-       by the build (not only in the IDE), and every warning fails the build, so none pile up. -->
+  <!-- Qualité du code : les analyseurs .NET au niveau recommandé, les règles de style de .editorconfig vérifiées
+       à la compilation (pas seulement dans l'IDE), et tout avertissement fait échouer la compilation, pour qu'aucun ne s'accumule. -->
   <PropertyGroup>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <!-- Needed by IDE0005 (unnecessary using) at build time. CS1591 would ask for an XML comment on every public member. -->
+    <!-- Requis par IDE0005 (using inutile) à la compilation. CS1591 exigerait un commentaire XML sur chaque membre public. -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <!--#if (false) -->
-  <!-- Demo only: turn the modules on, so the template repo builds and tests them.
-       inmemory and database exclude each other: the demo uses database.
-       The template engine removes this block from generated projects. -->
+  <!-- Démo seulement : active les modules, pour que le dépôt du modèle les compile et les teste.
+       inmemory et database s'excluent : la démo utilise database.
+       Le moteur de modèles retire ce bloc des projets générés. -->
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);UseScalar;UseSwaggerUi;UseDatabase;UseEfCore;UseTelemetry</DefineConstants>
   </PropertyGroup>
